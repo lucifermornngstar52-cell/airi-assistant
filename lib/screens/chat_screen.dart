@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../models/character_persona.dart';
 import '../services/ai_service.dart';
 import '../theme/app_theme.dart';
+import 'persona_screen.dart';
 
 class ChatMessage {
   final String text;
   final bool isUser;
-  final DateTime time;
-  ChatMessage({required this.text, required this.isUser}) : time = DateTime.now();
+  ChatMessage({required this.text, required this.isUser});
 }
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  @override State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
@@ -23,12 +22,25 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scroll     = ScrollController();
   final _ai         = AiService();
   bool _loading     = false;
+  CharacterPersona _persona = personaJarvis;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPersona();
+  }
+
+  Future<void> _loadPersona() async {
+    final type = await _ai.loadPersona();
+    setState(() {
+      _persona = allPersonas.firstWhere((p) => p.type == type);
+    });
+  }
 
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _loading) return;
     _controller.clear();
-
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
       _loading = true;
@@ -39,7 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
         .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
         .toList();
 
-    final reply = await _ai.chat(history);
+    final reply = await _ai.chat(history, persona: _persona);
 
     setState(() {
       _messages.add(ChatMessage(text: reply, isUser: false));
@@ -49,38 +61,59 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollDown() {
-    Future.delayed(150.ms, () {
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (_scroll.hasClients) {
         _scroll.animateTo(_scroll.position.maxScrollExtent,
-            duration: 300.ms, curve: Curves.easeOut);
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
 
+  void _openPersona() {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => PersonaScreen(
+        currentType: _persona.type,
+        onSelect: (p) => setState(() => _persona = p),
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isJarvis = _persona.type == PersonaType.jarvis;
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
         backgroundColor: AppTheme.bgColor,
-        title: Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [AppTheme.accentBlue, AppTheme.accentPurple],
+        title: GestureDetector(
+          onTap: _openPersona,
+          child: Row(children: [
+            Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: isJarvis
+                      ? [AppTheme.accentBlue, const Color(0xFF1A3A6B)]
+                      : [AppTheme.accentPurple, const Color(0xFFFF6BB5)],
+                ),
               ),
+              child: Center(child: Text(_persona.emoji, style: const TextStyle(fontSize: 18))),
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: 10),
-          const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('AIRI', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('онлайн', style: TextStyle(color: Colors.greenAccent, fontSize: 11)),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_persona.name,
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text('онлайн', style: TextStyle(color: Colors.greenAccent, fontSize: 11)),
+            ]),
           ]),
-        ]),
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.swap_horiz, color: AppTheme.textSecondary),
+            tooltip: 'Сменить персонажа',
+            onPressed: _openPersona,
+          ),
           IconButton(
             icon: const Icon(Icons.tune, color: AppTheme.textSecondary),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
@@ -89,38 +122,53 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 0,
       ),
       body: Column(children: [
-        // Сообщения
         Expanded(
-          child: _messages.isEmpty ? _emptyState() : ListView.builder(
-            controller: _scroll,
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length + (_loading ? 1 : 0),
-            itemBuilder: (ctx, i) {
-              if (i == _messages.length) return _typingBubble();
-              return _MessageBubble(msg: _messages[i], index: i);
-            },
-          ),
+          child: _messages.isEmpty
+              ? _emptyState()
+              : ListView.builder(
+                  controller: _scroll,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _messages.length + (_loading ? 1 : 0),
+                  itemBuilder: (ctx, i) {
+                    if (i == _messages.length) return _typingBubble();
+                    return _MessageBubble(msg: _messages[i], isJarvis: isJarvis);
+                  },
+                ),
         ),
-        // Инпут
         _InputBar(controller: _controller, loading: _loading, onSend: _send),
       ]),
     );
   }
 
-  Widget _emptyState() => Center(
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      ShaderMask(
-        shaderCallback: (b) => const LinearGradient(
-          colors: [AppTheme.accentBlue, AppTheme.accentPurple],
-        ).createShader(b),
-        child: const Icon(Icons.auto_awesome, size: 64, color: Colors.white),
-      ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
-      const SizedBox(height: 16),
-      const Text('Привет, я AIRI', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      const Text('Чем могу помочь?', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
-    ]),
-  );
+  Widget _emptyState() {
+    final isJarvis = _persona.type == PersonaType.jarvis;
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          width: 80, height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: isJarvis
+                  ? [AppTheme.accentBlue, const Color(0xFF1A3A6B)]
+                  : [AppTheme.accentPurple, const Color(0xFFFF6BB5)],
+            ),
+          ),
+          child: Center(child: Text(_persona.emoji, style: const TextStyle(fontSize: 38))),
+        ).animate().scale(duration: const Duration(milliseconds: 600), curve: Curves.elasticOut),
+        const SizedBox(height: 20),
+        Text(
+          isJarvis ? 'Добрый день. Чем могу помочь?' : 'Привет! Я здесь ✨',
+          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _persona.name,
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        ),
+      ]),
+    );
+  }
 
   Widget _typingBubble() => Align(
     alignment: Alignment.centerLeft,
@@ -138,8 +186,8 @@ class _ChatScreenState extends State<ChatScreen> {
             width: 6, height: 6,
             decoration: const BoxDecoration(color: AppTheme.accentBlue, shape: BoxShape.circle),
           ).animate(onPlay: (c) => c.repeat())
-           .fadeIn(delay: Duration(milliseconds: i * 150), duration: 300.ms)
-           .then().fadeOut(duration: 300.ms),
+           .fadeIn(delay: Duration(milliseconds: i * 150), duration: const Duration(milliseconds: 300))
+           .then().fadeOut(duration: const Duration(milliseconds: 300)),
           if (i < 2) const SizedBox(width: 4),
         ]
       ]),
@@ -149,15 +197,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _MessageBubble extends StatelessWidget {
   final ChatMessage msg;
-  final int index;
-  const _MessageBubble({required this.msg, required this.index});
+  final bool isJarvis;
+  const _MessageBubble({required this.msg, required this.isJarvis});
 
   @override
   Widget build(BuildContext context) {
     return Animate(
       effects: [
-        FadeEffect(duration: 250.ms),
-        SlideEffect(begin: Offset(msg.isUser ? 0.2 : -0.2, 0), end: Offset.zero, duration: 250.ms),
+        FadeEffect(duration: const Duration(milliseconds: 250)),
+        SlideEffect(
+          begin: Offset(msg.isUser ? 0.15 : -0.15, 0),
+          end: Offset.zero,
+          duration: const Duration(milliseconds: 250),
+        ),
       ],
       child: Align(
         alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -167,7 +219,9 @@ class _MessageBubble extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             gradient: msg.isUser
-                ? const LinearGradient(colors: [AppTheme.accentBlue, AppTheme.accentPurple])
+                ? LinearGradient(colors: isJarvis
+                    ? [AppTheme.accentBlue, const Color(0xFF1565C0)]
+                    : [AppTheme.accentPurple, const Color(0xFFE91E8C)])
                 : null,
             color: msg.isUser ? null : AppTheme.cardColor,
             borderRadius: BorderRadius.only(
@@ -202,7 +256,7 @@ class _InputBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.bgColor,
         border: Border(top: BorderSide(color: AppTheme.cardBorder, width: 0.5)),
       ),
@@ -233,7 +287,7 @@ class _InputBar extends StatelessWidget {
         GestureDetector(
           onTap: loading ? null : onSend,
           child: AnimatedContainer(
-            duration: 200.ms,
+            duration: const Duration(milliseconds: 200),
             width: 46, height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
