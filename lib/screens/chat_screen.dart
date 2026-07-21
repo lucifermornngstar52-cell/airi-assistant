@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../models/character_persona.dart';
 import '../services/ai_service.dart';
 import '../theme/app_theme.dart';
@@ -16,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   @override State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final _messages   = <ChatMessage>[];
   final _controller = TextEditingController();
   final _scroll     = ScrollController();
@@ -63,8 +62,11 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollDown() {
     Future.delayed(const Duration(milliseconds: 150), () {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -111,7 +113,6 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz, color: AppTheme.textSecondary),
-            tooltip: 'Сменить персонажа',
             onPressed: _openPersona,
           ),
           IconButton(
@@ -155,44 +156,75 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           child: Center(child: Text(_persona.emoji, style: const TextStyle(fontSize: 38))),
-        ).animate().scale(duration: const Duration(milliseconds: 600), curve: Curves.elasticOut),
+        ),
         const SizedBox(height: 20),
         Text(
           isJarvis ? 'Добрый день. Чем могу помочь?' : 'Привет! Я здесь ✨',
           style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        Text(
-          _persona.name,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-        ),
+        Text(_persona.name, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
       ]),
     );
   }
 
-  Widget _typingBubble() => Align(
-    alignment: Alignment.centerLeft,
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 8, right: 64),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.cardBorder, width: 0.5),
+  Widget _typingBubble() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, right: 64),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.cardBorder, width: 0.5),
+        ),
+        child: const SizedBox(
+          width: 40, height: 8,
+          child: _DotsIndicator(),
+        ),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        for (var i = 0; i < 3; i++) ...[
-          Container(
-            width: 6, height: 6,
-            decoration: const BoxDecoration(color: AppTheme.accentBlue, shape: BoxShape.circle),
-          ).animate(onPlay: (c) => c.repeat())
-           .fadeIn(delay: Duration(milliseconds: i * 150), duration: const Duration(milliseconds: 300))
-           .then().fadeOut(duration: const Duration(milliseconds: 300)),
-          if (i < 2) const SizedBox(width: 4),
-        ]
-      ]),
-    ),
-  );
+    );
+  }
+}
+
+class _DotsIndicator extends StatefulWidget {
+  const _DotsIndicator();
+  @override State<_DotsIndicator> createState() => _DotsIndicatorState();
+}
+
+class _DotsIndicatorState extends State<_DotsIndicator> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (i) {
+          final opacity = ((_ctrl.value * 3 - i) % 1.0).clamp(0.2, 1.0);
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            width: 7, height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.accentBlue.withOpacity(opacity),
+            ),
+          );
+        }),
+      ),
+    );
+  }
 }
 
 class _MessageBubble extends StatelessWidget {
@@ -202,43 +234,33 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Animate(
-      effects: [
-        FadeEffect(duration: const Duration(milliseconds: 250)),
-        SlideEffect(
-          begin: Offset(msg.isUser ? 0.15 : -0.15, 0),
-          end: Offset.zero,
-          duration: const Duration(milliseconds: 250),
-        ),
-      ],
-      child: Align(
-        alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: msg.isUser
-                ? LinearGradient(colors: isJarvis
-                    ? [AppTheme.accentBlue, const Color(0xFF1565C0)]
-                    : [AppTheme.accentPurple, const Color(0xFFE91E8C)])
-                : null,
-            color: msg.isUser ? null : AppTheme.cardColor,
-            borderRadius: BorderRadius.only(
-              topLeft:     const Radius.circular(18),
-              topRight:    const Radius.circular(18),
-              bottomLeft:  Radius.circular(msg.isUser ? 18 : 4),
-              bottomRight: Radius.circular(msg.isUser ? 4 : 18),
-            ),
-            border: msg.isUser ? null : Border.all(color: AppTheme.cardBorder, width: 0.5),
+    return Align(
+      alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: msg.isUser
+              ? LinearGradient(colors: isJarvis
+                  ? [AppTheme.accentBlue, const Color(0xFF1565C0)]
+                  : [AppTheme.accentPurple, const Color(0xFFE91E8C)])
+              : null,
+          color: msg.isUser ? null : AppTheme.cardColor,
+          borderRadius: BorderRadius.only(
+            topLeft:     const Radius.circular(18),
+            topRight:    const Radius.circular(18),
+            bottomLeft:  Radius.circular(msg.isUser ? 18 : 4),
+            bottomRight: Radius.circular(msg.isUser ? 4 : 18),
           ),
-          child: Text(
-            msg.text,
-            style: TextStyle(
-              color: msg.isUser ? Colors.white : AppTheme.textPrimary,
-              fontSize: 15,
-              height: 1.5,
-            ),
+          border: msg.isUser ? null : Border.all(color: AppTheme.cardBorder, width: 0.5),
+        ),
+        child: Text(
+          msg.text,
+          style: TextStyle(
+            color: msg.isUser ? Colors.white : AppTheme.textPrimary,
+            fontSize: 15,
+            height: 1.5,
           ),
         ),
       ),
@@ -271,8 +293,7 @@ class _InputBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-              maxLines: 4,
-              minLines: 1,
+              maxLines: 4, minLines: 1,
               onSubmitted: (_) => onSend(),
               decoration: const InputDecoration(
                 hintText: 'Напиши что-нибудь...',
