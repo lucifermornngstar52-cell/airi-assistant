@@ -1,1 +1,9 @@
-// Top-level build file — all config in settings.gradle and app/build.gradle
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url "https://storage.googleapis.com/download.flutter.io"
+        }
+    }
+}
