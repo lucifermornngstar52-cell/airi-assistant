@@ -78,10 +78,10 @@ const settingsItems = [
   ),
   SettingsItem(
     title: 'Память',
-    subtitle: 'Контекст диалога и история',
+    subtitle: 'SQLite • история диалогов + факты о пользователе',
     icon: Icons.memory_outlined,
     route: '/memory',
-    badge: 'soon',
+    badge: 'active',
   ),
   SettingsItem(
     title: 'Сцены',
