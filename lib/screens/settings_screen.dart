@@ -121,6 +121,21 @@ class SettingsScreen extends StatelessWidget {
           ],
         );
         break;
+      case '/memory':
+        screen = const _ModuleDetailScreen(
+          title: 'Память',
+          icon: Icons.memory_outlined,
+          items: [
+            ('Хранилище', 'SQLite (sqflite) — локально на устройстве'),
+            ('База данных', 'airi_memory.db'),
+            ('Таблицы', 'messages, facts, sessions'),
+            ('Контекст', 'Последние 20 сообщений в system prompt'),
+            ('Факты', 'Имя, работа, город, возраст — автоизвлечение'),
+            ('Загрузка', 'История восстанавливается при открытии чата'),
+            ('Синхронизация', 'Локально, без облака'),
+          ],
+        );
+        break;
       default:
         screen = _PlaceholderScreen(route: route);
     }
