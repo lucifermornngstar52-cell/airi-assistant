@@ -67,7 +67,7 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
     _windowWidth = newSize;
     _windowHeight = newSize * 1.4;
     await _live2d.setModelSize(newSize);
-    await FlutterOverlayWindow.resizeOverlay(_windowWidth.round(), _windowHeight.round(), PositionGravity.auto);
+    await FlutterOverlayWindow.resizeOverlay(_windowWidth.round(), _windowHeight.round(), true);
 
     // Отправляем в WebView
     _webController?.evaluateJavascript(
