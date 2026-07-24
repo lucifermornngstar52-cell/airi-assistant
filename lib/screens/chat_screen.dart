@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/character_persona.dart';
 import '../services/ai_service.dart';
+import '../services/voice_service.dart';
 import '../theme/app_theme.dart';
 import 'persona_screen.dart';
 
@@ -20,7 +21,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scroll     = ScrollController();
   final _ai         = AiService();
+  final _voice      = VoiceService();
   bool _loading     = false;
+  bool _listening   = false;
   CharacterPersona _persona = personaJarvis;
 
   @override
@@ -33,6 +36,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _controller.dispose();
     _scroll.dispose();
+    _voice.dispose();
     super.dispose();
   }
 
@@ -66,6 +70,28 @@ class _ChatScreenState extends State<ChatScreen> {
       _loading = false;
     });
     _scrollDown();
+  }
+
+  Future<void> _toggleVoice() async {
+    if (_listening) {
+      await _voice.stopListening();
+      setState(() => _listening = false);
+    } else {
+      setState(() => _listening = true);
+      await _voice.startListening((text) {
+        if (!mounted) return;
+        setState(() {
+          _controller.text = text;
+          _listening = false;
+        });
+        // Автоотправка после распознавания
+        Future.delayed(const Duration(milliseconds: 300), _send);
+      });
+      // Если разрешение не дано — сбросить
+      if (!_voice.isListening && mounted) {
+        setState(() => _listening = false);
+      }
+    }
   }
 
   void _scrollDown() {
@@ -140,13 +166,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
         ),
-        _InputBar(controller: _controller, loading: _loading, onSend: _send),
+        _InputBar(
+          controller: _controller,
+          loading: _loading,
+          listening: _listening,
+          persona: _persona,
+          onSend: _send,
+          onVoice: _toggleVoice,
+        ),
       ]),
     );
   }
 }
 
-// ── Аватар персонажа (инициалы, без эмодзи) ────────────────────────────────
+// ── Аватар персонажа ────────────────────────────────────────────────────────
 class _PersonaAvatar extends StatelessWidget {
   final CharacterPersona persona;
   final double size;
@@ -179,7 +212,7 @@ class _PersonaAvatar extends StatelessWidget {
   }
 }
 
-// ── Пустой экран ────────────────────────────────────────────────────────────
+// ── Пустой экран ─────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final CharacterPersona persona;
   final VoidCallback onTap;
@@ -216,7 +249,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Индикатор печатания ──────────────────────────────────────────────────────
+// ── Индикатор печатания ───────────────────────────────────────────────────────
 class _TypingBubble extends StatefulWidget {
   const _TypingBubble();
   @override State<_TypingBubble> createState() => _TypingBubbleState();
@@ -273,7 +306,7 @@ class _TypingBubbleState extends State<_TypingBubble>
   }
 }
 
-// ── Пузырь сообщения ─────────────────────────────────────────────────────────
+// ── Пузырь сообщения ──────────────────────────────────────────────────────────
 class _MessageBubble extends StatelessWidget {
   final ChatMessage msg;
   final CharacterPersona persona;
@@ -317,12 +350,23 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ── Поле ввода ───────────────────────────────────────────────────────────────
+// ── Поле ввода с голосом ──────────────────────────────────────────────────────
 class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool loading;
+  final bool listening;
+  final CharacterPersona persona;
   final VoidCallback onSend;
-  const _InputBar({required this.controller, required this.loading, required this.onSend});
+  final VoidCallback onVoice;
+
+  const _InputBar({
+    required this.controller,
+    required this.loading,
+    required this.listening,
+    required this.persona,
+    required this.onSend,
+    required this.onVoice,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -333,12 +377,22 @@ class _InputBar extends StatelessWidget {
         border: Border(top: BorderSide(color: AppTheme.cardBorder, width: 0.5)),
       ),
       child: Row(children: [
+        // Кнопка микрофона
+        _VoiceButton(listening: listening, onTap: onVoice),
+        const SizedBox(width: 10),
+
+        // Поле ввода
         Expanded(
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.cardColor,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.cardBorder, width: 0.5),
+              border: Border.all(
+                color: listening
+                    ? AppTheme.accentBlue.withOpacity(0.6)
+                    : AppTheme.cardBorder,
+                width: listening ? 1.5 : 0.5,
+              ),
             ),
             child: TextField(
               controller: controller,
@@ -347,16 +401,20 @@ class _InputBar extends StatelessWidget {
               minLines: 1,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSend(),
-              decoration: const InputDecoration(
-                hintText: 'Напиши что-нибудь...',
-                hintStyle: TextStyle(color: AppTheme.textSecondary),
+              decoration: InputDecoration(
+                hintText: listening ? 'Слушаю...' : 'Напиши что-нибудь...',
+                hintStyle: TextStyle(
+                  color: listening ? AppTheme.accentBlue : AppTheme.textSecondary,
+                ),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               ),
             ),
           ),
         ),
         const SizedBox(width: 10),
+
+        // Кнопка отправки
         GestureDetector(
           onTap: loading ? null : onSend,
           child: AnimatedContainer(
@@ -366,9 +424,7 @@ class _InputBar extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: loading
                   ? null
-                  : const LinearGradient(
-                      colors: [AppTheme.accentBlue, AppTheme.accentPurple],
-                    ),
+                  : LinearGradient(colors: persona.gradientColors),
               color: loading ? AppTheme.cardColor : null,
             ),
             child: Icon(
@@ -379,6 +435,78 @@ class _InputBar extends StatelessWidget {
           ),
         ),
       ]),
+    );
+  }
+}
+
+// ── Кнопка микрофона с анимацией ──────────────────────────────────────────────
+class _VoiceButton extends StatefulWidget {
+  final bool listening;
+  final VoidCallback onTap;
+  const _VoiceButton({required this.listening, required this.onTap});
+  @override State<_VoiceButton> createState() => _VoiceButtonState();
+}
+
+class _VoiceButtonState extends State<_VoiceButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_VoiceButton old) {
+    super.didUpdateWidget(old);
+    if (widget.listening) {
+      _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() { _pulse.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _pulse,
+        builder: (_, child) {
+          final scale = widget.listening ? 1.0 + _pulse.value * 0.1 : 1.0;
+          return Transform.scale(
+            scale: scale,
+            child: child,
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 46, height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.listening
+                ? AppTheme.accentBlue.withOpacity(0.2)
+                : AppTheme.cardColor,
+            border: Border.all(
+              color: widget.listening ? AppTheme.accentBlue : AppTheme.cardBorder,
+              width: widget.listening ? 1.5 : 0.5,
+            ),
+          ),
+          child: Icon(
+            widget.listening ? Icons.mic : Icons.mic_none_outlined,
+            color: widget.listening ? AppTheme.accentBlue : AppTheme.textSecondary,
+            size: 20,
+          ),
+        ),
+      ),
     );
   }
 }
