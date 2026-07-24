@@ -80,7 +80,7 @@ class OverlayService {
   /// Изменить размер оверлея
   Future<void> resize(double size) async {
     await _live2d.setModelSize(size);
-    await FlutterOverlayWindow.resizeOverlay(size.round(), (size * 1.4).round(), PositionGravity.auto);
+    await FlutterOverlayWindow.resizeOverlay(size.round(), (size * 1.4).round(), true);
     await sendMessage('size:$size');
   }
 }
