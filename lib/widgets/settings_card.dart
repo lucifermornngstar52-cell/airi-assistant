@@ -19,7 +19,12 @@ class SettingsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.cardBorder, width: 0.5),
+        border: Border.all(
+          color: item.badge == 'active'
+              ? AppTheme.accentBlue.withOpacity(0.25)
+              : AppTheme.cardBorder,
+          width: 0.5,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
@@ -36,14 +41,49 @@ class SettingsCard extends StatelessWidget {
               Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                  Row(children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    if (item.badge == 'active')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentBlue.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'работает',
+                          style: TextStyle(
+                            color: AppTheme.accentBlue,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else if (item.badge == 'soon')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.textSecondary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'скоро',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary.withOpacity(0.7),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ]),
                   const SizedBox(height: 3),
                   Text(
                     item.subtitle,
