@@ -4,7 +4,11 @@ import '../services/ai_service.dart';
 import '../services/voice_service.dart';
 import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
+import 'dart:io';
 import 'persona_screen.dart';
+import '../services/vision_service.dart';
+import '../services/emotion_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
   final String text;
@@ -30,14 +34,30 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _speaking  = false;
   CharacterPersona _persona = personaJarvis;
 
+  // Зрение и эмоции
+  final _vision = VisionService();
+  final _emotion = EmotionService();
+  String? _userEmotion;
+  bool _emotionWatching = false;
+  File? _pendingImage;
+
   @override
   void initState() {
     super.initState();
     _loadPersona();
+    _initEmotionWatcher();
+  }
+
+  void _initEmotionWatcher() {
+    _emotion.onEmotionDetected = (emotion) {
+      if (!mounted) return;
+      setState(() => _userEmotion = emotion);
+    };
   }
 
   @override
   void dispose() {
+    _emotion.stop();
     _controller.dispose();
     _scroll.dispose();
     _voice.dispose();
@@ -55,7 +75,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _loading) return;
+    final hasImage = _pendingImage != null;
+    if (text.isEmpty && !hasImage) return;
+    if (_loading) return;
     _controller.clear();
 
     // Если TTS говорит — останавливаем перед отправкой
@@ -64,8 +86,12 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() => _speaking = false);
     }
 
+    final displayText = hasImage
+        ? (text.isEmpty ? '📷 [фото]' : '$text 📷')
+        : text;
+
     setState(() {
-      _messages.add(ChatMessage(text: text, isUser: true));
+      _messages.add(ChatMessage(text: displayText, isUser: true));
       _loading = true;
     });
     _scrollDown();
@@ -74,7 +100,20 @@ class _ChatScreenState extends State<ChatScreen> {
         .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
         .toList();
 
-    final reply = await _ai.chat(history, persona: _persona);
+    String reply;
+    if (hasImage) {
+      // Vision запрос — фото + текст
+      final prompt = text.isEmpty
+          ? 'Опиши что ты видишь на этом фото.'
+          : text;
+      reply = await _ai.visionChat(prompt, _pendingImage!, persona: _persona);
+      _pendingImage = null;
+    } else if (_userEmotion != null) {
+      // Обычный чат с учётом эмоции
+      reply = await _ai.chatWithEmotion(history, persona: _persona, userEmotion: _userEmotion);
+    } else {
+      reply = await _ai.chat(history, persona: _persona);
+    }
 
     if (!mounted) return;
     setState(() {
@@ -144,6 +183,54 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // ── Камера / Зрение ────────────────────────────────────────────
+
+  Future<void> _capturePhoto() async {
+    final hasPermission = await _checkCameraPermission();
+    if (!hasPermission) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Разрешите доступ к камере в настройках'),
+          backgroundColor: AppTheme.cardColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final photo = await _vision.capturePhoto();
+    if (photo == null) return;
+    setState(() => _pendingImage = photo);
+  }
+
+  Future<bool> _checkCameraPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) return true;
+    final result = await Permission.camera.request();
+    return result.isGranted;
+  }
+
+  // ── Наблюдение за эмоциями ─────────────────────────────────────
+
+  void _toggleEmotionWatch() {
+    if (_emotionWatching) {
+      _emotion.stop();
+      setState(() {
+        _emotionWatching = false;
+        _userEmotion = null;
+      });
+    } else {
+      _checkCameraPermission().then((ok) {
+        if (ok) {
+          _emotion.start();
+          setState(() => _emotionWatching = true);
+        }
+      });
+    }
+  }
+
   void _showPermissionSnack() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -199,9 +286,19 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               Text(
-                _speaking ? 'говорит...' : 'онлайн',
+                _speaking
+                    ? 'говорит...'
+                    : _emotionWatching && _userEmotion != null
+                        ? 'видит: $_userEmotion'
+                        : _emotionWatching
+                            ? 'наблюдает за вами'
+                            : 'онлайн',
                 style: TextStyle(
-                  color: _speaking ? AppTheme.accentPurple : Colors.greenAccent,
+                  color: _speaking
+                      ? AppTheme.accentPurple
+                      : _emotionWatching
+                          ? AppTheme.accentBlue
+                          : Colors.greenAccent,
                   fontSize: 11,
                 ),
               ),
@@ -220,6 +317,24 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             onPressed: _toggleSpeaking,
+          ),
+          // Кнопка наблюдения за эмоциями
+          IconButton(
+            icon: Icon(
+              _emotionWatching ? Icons.face_retouching_natural : Icons.face_retouching_natural_outlined,
+              color: _emotionWatching ? AppTheme.accentPurple : AppTheme.textSecondary,
+            ),
+            onPressed: _toggleEmotionWatch,
+            tooltip: 'Наблюдение за эмоциями',
+          ),
+          // Кнопка камеры
+          IconButton(
+            icon: Icon(
+              Icons.camera_alt_outlined,
+              color: _pendingImage != null ? AppTheme.accentBlue : AppTheme.textSecondary,
+            ),
+            onPressed: _capturePhoto,
+            tooltip: 'Сделать фото',
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
