@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'memory_service.dart';
 import '../models/character_persona.dart';
 
 class AiService {
+  final _memory = MemoryService();
   Future<String> chat(
     List<Map<String, String>> history, {
     CharacterPersona? persona,
@@ -15,8 +17,12 @@ class AiService {
       return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
     }
 
-    final systemPrompt = persona?.systemPrompt ??
+    final basePrompt = persona?.systemPrompt ??
         'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
+
+    // Добавляем память (факты о пользователе) к системному промпту
+    final memorySummary = await _memory.getMemorySummary();
+    final systemPrompt = basePrompt + memorySummary;
 
     final messages = [
       {'role': 'system', 'content': systemPrompt},
@@ -120,7 +126,8 @@ class AiService {
 
     final basePrompt = persona?.systemPrompt ??
         'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
-    final systemPrompt = basePrompt + '\n\nСейчас пользователь выглядит так: "$userEmotion". Учитывай это в ответе — подстрой тон, эмпатию и настроение. Не упоминай прямо, что видишь эмоцию, если не уместно.';
+    final memorySummary = await _memory.getMemorySummary();
+    final systemPrompt = basePrompt + memorySummary + '\n\nСейчас пользователь выглядит так: "$userEmotion". Учитывай это в ответе — подстрой тон, эмпатию и настроение. Не упоминай прямо, что видишь эмоцию, если не уместно.';
 
     final messages = [
       {'role': 'system', 'content': systemPrompt},
@@ -151,6 +158,64 @@ class AiService {
     } catch (e) {
       return '❌ Нет соединения: $e';
     }
+  }
+
+
+  /// Извлечь факты из последнего диалога (вызывается после ответа)
+  Future<void> extractFact(String userMessage) async {
+    // Простые эвристики — без доп. API запроса
+    // "меня зовут X" -> fact name
+    // "я работаю X" -> fact work
+    // "мне нравится X" -> fact likes
+    final lower = userMessage.toLowerCase();
+
+    // Имя
+    final nameMatch = RegExp(r'меня зовут (\w+)|я (\w+), приятно', caseSensitive: false).firstMatch(userMessage);
+    if (nameMatch != null) {
+      final name = nameMatch.group(1) ?? nameMatch.group(2);
+      if (name != null && name.length > 1) {
+        await _memory.setFact('имя', name);
+      }
+    }
+
+    // Работа/профессия
+    final workMatch = RegExp(r'я работаю (.{2,30})|я (\w+)', caseSensitive: false).firstMatch(userMessage);
+    if (workMatch != null && lower.contains('работаю')) {
+      final work = workMatch.group(1) ?? workMatch.group(2);
+      if (work != null) await _memory.setFact('работа', work.trim());
+    }
+
+    // Город
+    final cityMatch = RegExp(r'я живу в (.{2,30})', caseSensitive: false).firstMatch(userMessage);
+    if (cityMatch != null) {
+      await _memory.setFact('город', cityMatch.group(1)!.trim());
+    }
+
+    // Возраст
+    final ageMatch = RegExp(r'мне (\d{1,2}) (?:лет|года)', caseSensitive: false).firstMatch(userMessage);
+    if (ageMatch != null) {
+      await _memory.setFact('возраст', ageMatch.group(1)!);
+    }
+  }
+
+  /// Сохранить сообщение в память
+  Future<void> saveToMemory(String role, String content, {String? persona}) async {
+    await _memory.addMessage(role, content, persona: persona);
+  }
+
+  /// Получить историю из памяти
+  Future<List<Map<String, String>>> loadMemoryHistory({int limit = 20}) async {
+    return _memory.getRecentMessages(limit: limit);
+  }
+
+  /// Очистить всю память
+  Future<void> clearMemory() async {
+    await _memory.clearAll();
+  }
+
+  /// Статистика памяти
+  Future<Map<String, int>> memoryStats() async {
+    return _memory.getStats();
   }
 
   Future<void> savePersona(PersonaType type) async {
