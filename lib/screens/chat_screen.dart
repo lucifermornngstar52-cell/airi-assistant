@@ -22,8 +22,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scroll     = ScrollController();
   final _ai         = AiService();
   final _voice      = VoiceService();
-  bool _loading     = false;
-  bool _listening   = false;
+
+  bool _loading   = false;
+  bool _listening = false;
   CharacterPersona _persona = personaJarvis;
 
   @override
@@ -74,24 +75,48 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _toggleVoice() async {
     if (_listening) {
+      // Повторное нажатие — принудительно остановить
       await _voice.stopListening();
+      if (!mounted) return;
       setState(() => _listening = false);
-    } else {
-      setState(() => _listening = true);
-      await _voice.startListening((text) {
+      return;
+    }
+
+    setState(() => _listening = true);
+
+    final started = await _voice.startListening(
+      onResult: (text) {
         if (!mounted) return;
+        // Финальный результат — вставляем и отправляем
         setState(() {
           _controller.text = text;
           _listening = false;
         });
-        // Автоотправка после распознавания
-        Future.delayed(const Duration(milliseconds: 300), _send);
-      });
-      // Если разрешение не дано — сбросить
-      if (!_voice.isListening && mounted) {
-        setState(() => _listening = false);
-      }
+        _send();
+      },
+      onPartial: (text) {
+        if (!mounted) return;
+        // Показываем промежуточный текст в поле ввода
+        setState(() => _controller.text = text);
+      },
+    );
+
+    // Если не удалось запустить (нет разрешения) — сбрасываем
+    if (!started && mounted) {
+      setState(() => _listening = false);
+      _showPermissionSnack();
     }
+  }
+
+  void _showPermissionSnack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Разрешите доступ к микрофону в настройках'),
+        backgroundColor: AppTheme.cardColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   void _scrollDown() {
@@ -179,7 +204,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-// ── Аватар персонажа ────────────────────────────────────────────────────────
+// ── Аватар ──────────────────────────────────────────────────────────────────
 class _PersonaAvatar extends StatelessWidget {
   final CharacterPersona persona;
   final double size;
@@ -223,33 +248,21 @@ class _EmptyState extends StatelessWidget {
     final greeting = persona.type == PersonaType.jarvis
         ? 'Добрый день. Чем могу помочь?'
         : 'Привет! Я слушаю тебя';
-
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        GestureDetector(
-          onTap: onTap,
-          child: _PersonaAvatar(persona: persona, size: 80),
-        ),
+        GestureDetector(onTap: onTap, child: _PersonaAvatar(persona: persona, size: 80)),
         const SizedBox(height: 20),
-        Text(
-          greeting,
-          style: const TextStyle(
-            color: AppTheme.textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(greeting, style: const TextStyle(
+          color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
-        Text(
-          persona.name,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-        ),
+        Text(persona.name, style: const TextStyle(
+          color: AppTheme.textSecondary, fontSize: 13)),
       ]),
     );
   }
 }
 
-// ── Индикатор печатания ───────────────────────────────────────────────────────
+// ── Typing bubble ─────────────────────────────────────────────────────────────
 class _TypingBubble extends StatefulWidget {
   const _TypingBubble();
   @override State<_TypingBubble> createState() => _TypingBubbleState();
@@ -258,18 +271,11 @@ class _TypingBubble extends StatefulWidget {
 class _TypingBubbleState extends State<_TypingBubble>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-
-  @override
-  void initState() {
+  @override void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat();
   }
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  @override void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +312,7 @@ class _TypingBubbleState extends State<_TypingBubble>
   }
 }
 
-// ── Пузырь сообщения ──────────────────────────────────────────────────────────
+// ── Пузырь ───────────────────────────────────────────────────────────────────
 class _MessageBubble extends StatelessWidget {
   final ChatMessage msg;
   final CharacterPersona persona;
@@ -318,14 +324,10 @@ class _MessageBubble extends StatelessWidget {
       alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: msg.isUser
-              ? LinearGradient(colors: persona.gradientColors)
-              : null,
+          gradient: msg.isUser ? LinearGradient(colors: persona.gradientColors) : null,
           color: msg.isUser ? null : AppTheme.cardColor,
           borderRadius: BorderRadius.only(
             topLeft:     const Radius.circular(18),
@@ -333,24 +335,19 @@ class _MessageBubble extends StatelessWidget {
             bottomLeft:  Radius.circular(msg.isUser ? 18 : 4),
             bottomRight: Radius.circular(msg.isUser ? 4 : 18),
           ),
-          border: msg.isUser
-              ? null
-              : Border.all(color: AppTheme.cardBorder, width: 0.5),
+          border: msg.isUser ? null : Border.all(color: AppTheme.cardBorder, width: 0.5),
         ),
-        child: Text(
-          msg.text,
+        child: Text(msg.text,
           style: TextStyle(
             color: msg.isUser ? Colors.white : AppTheme.textPrimary,
-            fontSize: 15,
-            height: 1.5,
-          ),
-        ),
+            fontSize: 15, height: 1.5,
+          )),
       ),
     );
   }
 }
 
-// ── Поле ввода с голосом ──────────────────────────────────────────────────────
+// ── Input bar ─────────────────────────────────────────────────────────────────
 class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool loading;
@@ -377,28 +374,22 @@ class _InputBar extends StatelessWidget {
         border: Border(top: BorderSide(color: AppTheme.cardBorder, width: 0.5)),
       ),
       child: Row(children: [
-        // Кнопка микрофона
         _VoiceButton(listening: listening, onTap: onVoice),
         const SizedBox(width: 10),
-
-        // Поле ввода
         Expanded(
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.cardColor,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: listening
-                    ? AppTheme.accentBlue.withOpacity(0.6)
-                    : AppTheme.cardBorder,
+                color: listening ? AppTheme.accentBlue.withOpacity(0.6) : AppTheme.cardBorder,
                 width: listening ? 1.5 : 0.5,
               ),
             ),
             child: TextField(
               controller: controller,
               style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-              maxLines: 4,
-              minLines: 1,
+              maxLines: 4, minLines: 1,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSend(),
               decoration: InputDecoration(
@@ -413,8 +404,6 @@ class _InputBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-
-        // Кнопка отправки
         GestureDetector(
           onTap: loading ? null : onSend,
           child: AnimatedContainer(
@@ -422,9 +411,7 @@ class _InputBar extends StatelessWidget {
             width: 46, height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: loading
-                  ? null
-                  : LinearGradient(colors: persona.gradientColors),
+              gradient: loading ? null : LinearGradient(colors: persona.gradientColors),
               color: loading ? AppTheme.cardColor : null,
             ),
             child: Icon(
@@ -439,7 +426,7 @@ class _InputBar extends StatelessWidget {
   }
 }
 
-// ── Кнопка микрофона с анимацией ──────────────────────────────────────────────
+// ── Кнопка микрофона ──────────────────────────────────────────────────────────
 class _VoiceButton extends StatefulWidget {
   final bool listening;
   final VoidCallback onTap;
@@ -456,18 +443,18 @@ class _VoiceButtonState extends State<_VoiceButton>
     super.initState();
     _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 700),
     );
   }
 
   @override
   void didUpdateWidget(_VoiceButton old) {
     super.didUpdateWidget(old);
-    if (widget.listening) {
+    if (widget.listening && !_pulse.isAnimating) {
       _pulse.repeat(reverse: true);
-    } else {
+    } else if (!widget.listening) {
       _pulse.stop();
-      _pulse.value = 0;
+      _pulse.animateTo(0, duration: const Duration(milliseconds: 200));
     }
   }
 
@@ -480,20 +467,17 @@ class _VoiceButtonState extends State<_VoiceButton>
       onTap: widget.onTap,
       child: AnimatedBuilder(
         animation: _pulse,
-        builder: (_, child) {
-          final scale = widget.listening ? 1.0 + _pulse.value * 0.1 : 1.0;
-          return Transform.scale(
-            scale: scale,
-            child: child,
-          );
-        },
+        builder: (_, child) => Transform.scale(
+          scale: widget.listening ? 1.0 + _pulse.value * 0.12 : 1.0,
+          child: child,
+        ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           width: 46, height: 46,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: widget.listening
-                ? AppTheme.accentBlue.withOpacity(0.2)
+                ? AppTheme.accentBlue.withOpacity(0.18)
                 : AppTheme.cardColor,
             border: Border.all(
               color: widget.listening ? AppTheme.accentBlue : AppTheme.cardBorder,

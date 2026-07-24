@@ -4,46 +4,81 @@ import 'package:permission_handler/permission_handler.dart';
 class VoiceService {
   final SpeechToText _stt = SpeechToText();
   bool _initialized = false;
-  bool _listening = false;
+  bool _listening    = false;
+  String _partialText = '';
 
   bool get isListening => _listening;
+  String get partialText => _partialText;
 
-  /// Инициализация — вызывается один раз
+  /// Инициализация — вызывается один раз, возвращает true если готов
   Future<bool> init() async {
     if (_initialized) return true;
 
-    // Запрашиваем разрешение
     final status = await Permission.microphone.request();
     if (!status.isGranted) return false;
 
     _initialized = await _stt.initialize(
-      onError: (_) => _listening = false,
+      onError: (e) {
+        _listening   = false;
+        _partialText = '';
+      },
+      onStatus: (status) {
+        // listening → notListening — STT сам остановился (конец фразы)
+        if (status == SpeechToText.notListeningStatus) {
+          _listening = false;
+        }
+      },
     );
     return _initialized;
   }
 
-  /// Начать слушать. [onResult] вызывается с текстом.
-  Future<void> startListening(void Function(String text) onResult) async {
-    if (_listening) return;
+  /// Начать слушать.
+  /// [onResult]   — вызывается с финальным текстом.
+  /// [onPartial]  — вызывается с промежуточным текстом (для отображения).
+  Future<bool> startListening({
+    required void Function(String text) onResult,
+    void Function(String text)? onPartial,
+  }) async {
+    if (_listening) return false;
     final ready = await init();
-    if (!ready) return;
+    if (!ready) return false;
 
-    _listening = true;
+    _listening   = true;
+    _partialText = '';
+
     await _stt.listen(
       onResult: (r) {
-        if (r.finalResult && r.recognizedWords.isNotEmpty) {
-          onResult(r.recognizedWords);
+        _partialText = r.recognizedWords;
+
+        if (onPartial != null) {
+          onPartial(r.recognizedWords);
+        }
+
+        // Срабатываем только при финальном результате с текстом
+        if (r.finalResult && r.recognizedWords.trim().isNotEmpty) {
+          _listening   = false;
+          _partialText = '';
+          onResult(r.recognizedWords.trim());
         }
       },
       localeId: 'ru_RU',
-      listenMode: ListenMode.confirmation,
-      pauseFor: const Duration(seconds: 2),
+      // dictation — не ждёт подтверждения, фиксирует фразу сразу
+      listenMode: ListenMode.dictation,
+      // пауза 1.5с после последнего слова → финальный результат
+      pauseFor: const Duration(milliseconds: 1500),
+      // максимум слушаем 15 секунд
+      listenFor: const Duration(seconds: 15),
+      // частичные результаты — чтобы показывать текст в реальном времени
+      partialResults: true,
     );
+
+    return true;
   }
 
-  /// Остановить
+  /// Принудительная остановка (кнопка повторного нажатия)
   Future<void> stopListening() async {
-    _listening = false;
+    _listening   = false;
+    _partialText = '';
     await _stt.stop();
   }
 
