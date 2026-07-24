@@ -29,13 +29,5 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
-        <service
-            android:name=" flutter.overlay_window.FlutterOverlayWindowService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_FG_SERVICE_TYPE"
-                android:value="specialUse"/>
-        </service>
     </application>
 </manifest>
