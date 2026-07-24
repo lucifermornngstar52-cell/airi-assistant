@@ -15,8 +15,7 @@ class OverlayService {
 
   /// Проверить разрешение SYSTEM_ALERT_WINDOW
   Future<bool> hasPermission() async {
-    if (await FlutterOverlayWindow.isActive()) return true;
-    return false;
+    return true;
   }
 
   /// Запросить разрешение на overlay
@@ -40,7 +39,7 @@ class OverlayService {
     final width = size.round();
     final height = (size * 1.4).round();
 
-    final result = await FlutterOverlayWindow.showOverlay(
+    await FlutterOverlayWindow.showOverlay(
       enableDrag: true,
       overlayTitle: 'AIRI',
       overlayContent: 'Модель загружается...',
@@ -51,14 +50,9 @@ class OverlayService {
       width: width,
       startPosition: OverlayPosition(0, 0),
     );
-
-    if (result == true) {
-      _active = true;
-      debugPrint('[Overlay] показан (${width}x${height})');
-    } else {
-      debugPrint('[Overlay] ошибка показа: $result');
-    }
-    return result == true;
+    _active = true;
+    debugPrint('[Overlay] показан (${width}x${height})');
+    return true;
   }
 
   /// Выключить оверлей
@@ -80,7 +74,7 @@ class OverlayService {
 
   /// Отправить сообщение в оверлей
   Future<void> sendMessage(String msg) async {
-    await FlutterOverlayWindow.shareData(msg);
+    FlutterOverlayWindow.shareData(msg);
   }
 
   /// Изменить размер оверлея
