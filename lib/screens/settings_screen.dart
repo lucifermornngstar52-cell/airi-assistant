@@ -92,6 +92,35 @@ class SettingsScreen extends StatelessWidget {
           ],
         );
         break;
+      case '/modules/vision':
+        screen = const _ModuleDetailScreen(
+          title: 'Зрение (Vision)',
+          icon: Icons.visibility_outlined,
+          items: [
+            ('Источник', 'Камера (image_picker)'),
+            ('Движок', 'GPT-4o-mini Vision API'),
+            ('Размер фото', '1024x1024, качество 85%'),
+            ('Формат', 'JPEG / PNG -> base64'),
+            ('Макс. токенов', '800'),
+            ('Промпт', 'Описание фото или ответ на вопрос'),
+          ],
+        );
+        break;
+      case '/modules/emotion':
+        screen = const _ModuleDetailScreen(
+          title: 'Анализ эмоций',
+          icon: Icons.face_retouching_natural_outlined,
+          items: [
+            ('Камера', 'Фронтальная (CameraDevice.front)'),
+            ('Интервал', 'Каждые 20 секунд'),
+            ('Первая проверка', 'Через 8 сек после запуска'),
+            ('Движок', 'GPT-4o-mini Vision API'),
+            ('Max tokens', '50 (короткий ответ)'),
+            ('Интеграция', 'Эмоция влияет на тон ответа AI'),
+            ('Размер фото', '768x768, качество 75%'),
+          ],
+        );
+        break;
       default:
         screen = _PlaceholderScreen(route: route);
     }
