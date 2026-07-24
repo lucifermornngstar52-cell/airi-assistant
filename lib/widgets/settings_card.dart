@@ -4,13 +4,11 @@ import '../theme/app_theme.dart';
 
 class SettingsCard extends StatelessWidget {
   final SettingsItem item;
-  final int index;
   final VoidCallback onTap;
 
   const SettingsCard({
     super.key,
     required this.item,
-    required this.index,
     required this.onTap,
   });
 
@@ -20,34 +18,44 @@ class SettingsCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.cardBorder, width: 0.5),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          splashColor: AppTheme.accentBlue.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(14),
+          splashColor: AppTheme.accentBlue.withOpacity(0.06),
+          highlightColor: AppTheme.accentBlue.withOpacity(0.03),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: Row(children: [
+              Icon(item.icon, color: AppTheme.textSecondary, size: 22),
+              const SizedBox(width: 14),
               Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: const TextStyle(
-                    color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w600,
-                  )),
-                  const SizedBox(height: 5),
-                  Text(item.subtitle, style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13, height: 1.4,
-                  )),
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    item.subtitle,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
                 ],
               )),
-              const SizedBox(width: 12),
-              Text(item.iconPath, style: TextStyle(
-                fontSize: 32, color: Colors.white.withOpacity(0.08),
-              )),
+              const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 18),
             ]),
           ),
         ),

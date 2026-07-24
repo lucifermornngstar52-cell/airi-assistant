@@ -1,13 +1,15 @@
+import 'package:flutter/material.dart';
+
 class SettingsItem {
   final String title;
   final String subtitle;
-  final String iconPath; // emoji или путь к иконке
+  final IconData icon;
   final String route;
 
   const SettingsItem({
     required this.title,
     required this.subtitle,
-    required this.iconPath,
+    required this.icon,
     required this.route,
   });
 }
@@ -15,50 +17,50 @@ class SettingsItem {
 const settingsItems = [
   SettingsItem(
     title: 'Карта AIRI',
-    subtitle: 'Используйте предустановленные карты персонажей AIRI',
-    iconPath: '🎴',
+    subtitle: 'Предустановленные карты персонажей',
+    icon: Icons.person_outline,
     route: '/card',
   ),
   SettingsItem(
     title: 'Модули',
-    subtitle: 'Мыслительный процесс, зрение, синтез речи, игры и т. д.',
-    iconPath: '🧩',
+    subtitle: 'Зрение, синтез речи, дополнения',
+    icon: Icons.extension_outlined,
     route: '/modules',
   ),
   SettingsItem(
     title: 'Сцены',
-    subtitle: 'Настройте виртуальную среду для персонажей.',
-    iconPath: '🛋',
+    subtitle: 'Виртуальная среда для персонажей',
+    icon: Icons.landscape_outlined,
     route: '/scenes',
   ),
   SettingsItem(
     title: 'Модели',
     subtitle: 'Live2D, VRM, Spine и др.',
-    iconPath: '🧍',
+    icon: Icons.view_in_ar_outlined,
     route: '/models',
   ),
   SettingsItem(
     title: 'Память',
     subtitle: 'Хранилище и организация воспоминаний',
-    iconPath: '💭',
+    icon: Icons.memory_outlined,
     route: '/memory',
   ),
   SettingsItem(
     title: 'Провайдеры',
-    subtitle: 'LLM-модели, провайдеры речи и др.',
-    iconPath: '⚙️',
+    subtitle: 'LLM-модели и провайдеры речи',
+    icon: Icons.hub_outlined,
     route: '/providers',
   ),
   SettingsItem(
     title: 'Расширения',
     subtitle: 'Плагины и дополнительные возможности',
-    iconPath: '🔌',
+    icon: Icons.power_outlined,
     route: '/extensions',
   ),
   SettingsItem(
     title: 'Разработчик',
     subtitle: 'Отладка, логи и dev-инструменты',
-    iconPath: '🛠',
+    icon: Icons.code_outlined,
     route: '/developer',
   ),
 ];

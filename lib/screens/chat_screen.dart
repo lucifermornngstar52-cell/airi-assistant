@@ -15,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   @override State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
+class _ChatScreenState extends State<ChatScreen> {
   final _messages   = <ChatMessage>[];
   final _controller = TextEditingController();
   final _scroll     = ScrollController();
@@ -29,8 +29,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _loadPersona();
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadPersona() async {
     final type = await _ai.loadPersona();
+    if (!mounted) return;
     setState(() {
       _persona = allPersonas.firstWhere((p) => p.type == type);
     });
@@ -52,6 +60,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     final reply = await _ai.chat(history, persona: _persona);
 
+    if (!mounted) return;
     setState(() {
       _messages.add(ChatMessage(text: reply, isUser: false));
       _loading = false;
@@ -82,57 +91,52 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isJarvis = _persona.type == PersonaType.jarvis;
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
         backgroundColor: AppTheme.bgColor,
+        elevation: 0,
+        titleSpacing: 16,
         title: GestureDetector(
           onTap: _openPersona,
           child: Row(children: [
-            Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: isJarvis
-                      ? [AppTheme.accentBlue, const Color(0xFF1A3A6B)]
-                      : [AppTheme.accentPurple, const Color(0xFFFF6BB5)],
-                ),
-              ),
-              child: Center(child: Text(_persona.emoji, style: const TextStyle(fontSize: 18))),
-            ),
+            _PersonaAvatar(persona: _persona, size: 38),
             const SizedBox(width: 10),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_persona.name,
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-              const Text('онлайн', style: TextStyle(color: Colors.greenAccent, fontSize: 11)),
+              Text(
+                _persona.name,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Text(
+                'онлайн',
+                style: TextStyle(color: Colors.greenAccent, fontSize: 11),
+              ),
             ]),
           ]),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.textSecondary),
-            onPressed: _openPersona,
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune, color: AppTheme.textSecondary),
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
+          const SizedBox(width: 4),
         ],
-        elevation: 0,
       ),
       body: Column(children: [
         Expanded(
           child: _messages.isEmpty
-              ? _emptyState()
+              ? _EmptyState(persona: _persona, onTap: _openPersona)
               : ListView.builder(
                   controller: _scroll,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   itemCount: _messages.length + (_loading ? 1 : 0),
                   itemBuilder: (ctx, i) {
-                    if (i == _messages.length) return _typingBubble();
-                    return _MessageBubble(msg: _messages[i], isJarvis: isJarvis);
+                    if (i == _messages.length) return const _TypingBubble();
+                    return _MessageBubble(msg: _messages[i], persona: _persona);
                   },
                 ),
         ),
@@ -140,66 +144,95 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ]),
     );
   }
+}
 
-  Widget _emptyState() {
-    final isJarvis = _persona.type == PersonaType.jarvis;
-    return Center(
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Container(
-          width: 80, height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: isJarvis
-                  ? [AppTheme.accentBlue, const Color(0xFF1A3A6B)]
-                  : [AppTheme.accentPurple, const Color(0xFFFF6BB5)],
-            ),
+// ── Аватар персонажа (инициалы, без эмодзи) ────────────────────────────────
+class _PersonaAvatar extends StatelessWidget {
+  final CharacterPersona persona;
+  final double size;
+  const _PersonaAvatar({required this.persona, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size, height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: persona.gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          persona.initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: size * 0.32,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
-          child: Center(child: Text(_persona.emoji, style: const TextStyle(fontSize: 38))),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          isJarvis ? 'Добрый день. Чем могу помочь?' : 'Привет! Я здесь ✨',
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Text(_persona.name, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-      ]),
-    );
-  }
-
-  Widget _typingBubble() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8, right: 64),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppTheme.cardColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.cardBorder, width: 0.5),
-        ),
-        child: const SizedBox(
-          width: 40, height: 8,
-          child: _DotsIndicator(),
         ),
       ),
     );
   }
 }
 
-class _DotsIndicator extends StatefulWidget {
-  const _DotsIndicator();
-  @override State<_DotsIndicator> createState() => _DotsIndicatorState();
+// ── Пустой экран ────────────────────────────────────────────────────────────
+class _EmptyState extends StatelessWidget {
+  final CharacterPersona persona;
+  final VoidCallback onTap;
+  const _EmptyState({required this.persona, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final greeting = persona.type == PersonaType.jarvis
+        ? 'Добрый день. Чем могу помочь?'
+        : 'Привет! Я слушаю тебя';
+
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        GestureDetector(
+          onTap: onTap,
+          child: _PersonaAvatar(persona: persona, size: 80),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          greeting,
+          style: const TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          persona.name,
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        ),
+      ]),
+    );
+  }
 }
 
-class _DotsIndicatorState extends State<_DotsIndicator> with SingleTickerProviderStateMixin {
+// ── Индикатор печатания ──────────────────────────────────────────────────────
+class _TypingBubble extends StatefulWidget {
+  const _TypingBubble();
+  @override State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
   }
 
   @override
@@ -207,44 +240,58 @@ class _DotsIndicatorState extends State<_DotsIndicator> with SingleTickerProvide
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, __) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (i) {
-          final opacity = ((_ctrl.value * 3 - i) % 1.0).clamp(0.2, 1.0);
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            width: 7, height: 7,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.accentBlue.withOpacity(opacity),
-            ),
-          );
-        }),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, right: 64),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.cardBorder, width: 0.5),
+        ),
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(3, (i) {
+              final t = (_ctrl.value * 3 - i).clamp(0.0, 1.0);
+              final opacity = (t < 0.5 ? t * 2 : (1 - t) * 2).clamp(0.15, 1.0);
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: 7, height: 7,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.accentBlue.withOpacity(opacity),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
 }
 
+// ── Пузырь сообщения ─────────────────────────────────────────────────────────
 class _MessageBubble extends StatelessWidget {
   final ChatMessage msg;
-  final bool isJarvis;
-  const _MessageBubble({required this.msg, required this.isJarvis});
+  final CharacterPersona persona;
+  const _MessageBubble({required this.msg, required this.persona});
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        margin: const EdgeInsets.only(bottom: 6),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           gradient: msg.isUser
-              ? LinearGradient(colors: isJarvis
-                  ? [AppTheme.accentBlue, const Color(0xFF1565C0)]
-                  : [AppTheme.accentPurple, const Color(0xFFE91E8C)])
+              ? LinearGradient(colors: persona.gradientColors)
               : null,
           color: msg.isUser ? null : AppTheme.cardColor,
           borderRadius: BorderRadius.only(
@@ -253,7 +300,9 @@ class _MessageBubble extends StatelessWidget {
             bottomLeft:  Radius.circular(msg.isUser ? 18 : 4),
             bottomRight: Radius.circular(msg.isUser ? 4 : 18),
           ),
-          border: msg.isUser ? null : Border.all(color: AppTheme.cardBorder, width: 0.5),
+          border: msg.isUser
+              ? null
+              : Border.all(color: AppTheme.cardBorder, width: 0.5),
         ),
         child: Text(
           msg.text,
@@ -268,6 +317,7 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
+// ── Поле ввода ───────────────────────────────────────────────────────────────
 class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool loading;
@@ -277,7 +327,7 @@ class _InputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       decoration: const BoxDecoration(
         color: AppTheme.bgColor,
         border: Border(top: BorderSide(color: AppTheme.cardBorder, width: 0.5)),
@@ -293,7 +343,9 @@ class _InputBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-              maxLines: 4, minLines: 1,
+              maxLines: 4,
+              minLines: 1,
+              textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSend(),
               decoration: const InputDecoration(
                 hintText: 'Напиши что-нибудь...',
@@ -312,13 +364,15 @@ class _InputBar extends StatelessWidget {
             width: 46, height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: loading ? null : const LinearGradient(
-                colors: [AppTheme.accentBlue, AppTheme.accentPurple],
-              ),
+              gradient: loading
+                  ? null
+                  : const LinearGradient(
+                      colors: [AppTheme.accentBlue, AppTheme.accentPurple],
+                    ),
               color: loading ? AppTheme.cardColor : null,
             ),
             child: Icon(
-              loading ? Icons.hourglass_top : Icons.arrow_upward,
+              loading ? Icons.hourglass_top_rounded : Icons.arrow_upward_rounded,
               color: loading ? AppTheme.textSecondary : Colors.white,
               size: 20,
             ),
