@@ -67,7 +67,7 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
     _windowWidth = newSize;
     _windowHeight = newSize * 1.4;
     await _live2d.setModelSize(newSize);
-    await FlutterOverlayWindow.resizeOverlay(_windowWidth.round(), _windowHeight.round());
+    await FlutterOverlayWindow.resizeOverlay(_windowWidth.round(), _windowHeight.round(), PositionGravity.auto);
 
     // Отправляем в WebView
     _webController?.evaluateJavascript(
@@ -199,7 +199,7 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
       data: html,
       mimeType: 'text/html',
       encoding: 'utf-8',
-      baseUrl: Uri.parse('https://localhost/'),
+      baseUrl: WebUri('https://localhost/'),
     );
 
     // Регистрируем хендлеры
