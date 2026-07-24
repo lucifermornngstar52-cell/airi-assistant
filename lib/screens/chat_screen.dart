@@ -9,6 +9,8 @@ import 'persona_screen.dart';
 import '../services/vision_service.dart';
 import '../services/emotion_service.dart';
 import '../services/memory_service.dart';
+import '../services/overlay_service.dart';
+import '../overlay/live2d_overlay.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
@@ -41,6 +43,8 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _userEmotion;
   bool _emotionWatching = false;
   File? _pendingImage;
+  final _overlay = OverlayService();
+  bool _overlayActive = false;
 
   @override
   void initState() {
@@ -251,6 +255,25 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // ── Live2D Overlay ────────────────────────────────────────────
+
+  void _toggleOverlay() async {
+    final result = await _overlay.toggle();
+    if (!mounted) return;
+    setState(() => _overlayActive = result);
+    if (!result && _overlay.isActive == false) {
+      // Показываем подсказку если разрешение не дано
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Разрешите отображение поверх других приложений'),
+          backgroundColor: AppTheme.cardColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
   void _showPermissionSnack() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -347,6 +370,15 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             onPressed: _toggleEmotionWatch,
             tooltip: _emotionWatching ? 'Наблюдение активно' : 'Включить наблюдение',
+          ),
+          // Кнопка Live2D оверлея
+          IconButton(
+            icon: Icon(
+              _overlayActive ? Icons.layers : Icons.layers_outlined,
+              color: _overlayActive ? AppTheme.accentBlue : AppTheme.textSecondary,
+            ),
+            onPressed: _toggleOverlay,
+            tooltip: 'Live2D оверлей',
           ),
           // Кнопка камеры
           IconButton(
