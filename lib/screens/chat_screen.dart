@@ -318,14 +318,15 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             onPressed: _toggleSpeaking,
           ),
-          // Кнопка наблюдения за эмоциями
+          // Индикатор скрытного наблюдения за эмоциями
           IconButton(
             icon: Icon(
-              _emotionWatching ? Icons.face_retouching_natural : Icons.face_retouching_natural_outlined,
-              color: _emotionWatching ? AppTheme.accentPurple : AppTheme.textSecondary,
+              _emotionWatching ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: _emotionWatching ? AppTheme.accentBlue.withOpacity(0.6) : AppTheme.textSecondary,
+              size: 20,
             ),
             onPressed: _toggleEmotionWatch,
-            tooltip: 'Наблюдение за эмоциями',
+            tooltip: _emotionWatching ? 'Наблюдение активно' : 'Включить наблюдение',
           ),
           // Кнопка камеры
           IconButton(
