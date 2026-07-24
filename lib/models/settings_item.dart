@@ -70,11 +70,11 @@ const settingsItems = [
     badge: 'active',
   ),
   SettingsItem(
-    title: 'Live2D модели',
-    subtitle: 'Анимация персонажей на экране',
+    title: 'Live2D оверлей',
+    subtitle: 'Модель поверх всех приложений • HTTP загрузка',
     icon: Icons.view_in_ar_outlined,
     route: '/models',
-    badge: 'soon',
+    badge: 'active',
   ),
   SettingsItem(
     title: 'Память',
