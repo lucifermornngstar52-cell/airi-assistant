@@ -8,6 +8,7 @@ import 'dart:io';
 import 'persona_screen.dart';
 import '../services/vision_service.dart';
 import '../services/emotion_service.dart';
+import '../services/memory_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
@@ -46,6 +47,19 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _loadPersona();
     _initEmotionWatcher();
+    _initMemory();
+  }
+
+  Future<void> _initMemory() async {
+    await _ai.loadMemoryHistory(limit: 15).then((history) {
+      if (!mounted || history.isEmpty) return;
+      setState(() {
+        for (var m in history) {
+          _messages.add(ChatMessage(text: m['content']!, isUser: m['role'] == 'user'));
+        }
+      });
+      _scrollDown();
+    });
   }
 
   void _initEmotionWatcher() {
@@ -95,6 +109,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _loading = true;
     });
     _scrollDown();
+    // Сохраняем в память
+    _ai.saveToMemory('user', text.isEmpty ? '[фото]' : text, persona: _persona.type.name);
 
     final history = _messages
         .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
@@ -121,6 +137,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _loading = false;
     });
     _scrollDown();
+    // Сохраняем ответ в память
+    _ai.saveToMemory('assistant', reply, persona: _persona.type.name);
+    // Пытаемся извлечь факты из сообщения пользователя
+    if (text.isNotEmpty) _ai.extractFact(text);
 
     // Автовоспроизведение ответа
     setState(() => _speaking = true);
