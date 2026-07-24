@@ -23,12 +23,12 @@ class VoiceService {
 
     _initialized = await _stt.initialize(
       onError: (e) {
-        debugPrint('[Voice] onError: \${e.errorMsgPermanent}');
+        debugPrint('[Voice] onError: \${e.permanent}');
         _listening   = false;
         _partialText = '';
         _errorCount++;
         // На persistent errors — не пытаемся retry
-        if (e.errorMsgPermanent) return;
+        if (e.permanent) return;
         // На временных ошибках — retry через 800ms
         if (_errorCount < 3) {
           _retryTimer?.cancel();
@@ -70,7 +70,7 @@ class VoiceService {
     );
   }
 
-  void _onResult(SpeechRecognitionResult r) {
+  void _onResult(r) {
     _partialText = r.recognizedWords;
     _lastOnPartial?.call(r.recognizedWords);
 
