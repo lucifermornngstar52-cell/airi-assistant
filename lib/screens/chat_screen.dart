@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/character_persona.dart';
 import '../services/ai_service.dart';
 import '../services/voice_service.dart';
+import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
 import 'persona_screen.dart';
 
@@ -22,9 +23,11 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scroll     = ScrollController();
   final _ai         = AiService();
   final _voice      = VoiceService();
+  final _tts        = TtsService();
 
   bool _loading   = false;
   bool _listening = false;
+  bool _speaking  = false;
   CharacterPersona _persona = personaJarvis;
 
   @override
@@ -38,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.dispose();
     _scroll.dispose();
     _voice.dispose();
+    _tts.dispose();
     super.dispose();
   }
 
@@ -53,6 +57,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty || _loading) return;
     _controller.clear();
+
+    // Если TTS говорит — останавливаем перед отправкой
+    if (_speaking) {
+      await _tts.stop();
+      setState(() => _speaking = false);
+    }
+
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
       _loading = true;
@@ -71,15 +82,25 @@ class _ChatScreenState extends State<ChatScreen> {
       _loading = false;
     });
     _scrollDown();
+
+    // Автовоспроизведение ответа
+    setState(() => _speaking = true);
+    await _tts.speak(reply, _persona.type);
+    if (mounted) setState(() => _speaking = false);
   }
 
   Future<void> _toggleVoice() async {
     if (_listening) {
-      // Повторное нажатие — принудительно остановить
       await _voice.stopListening();
       if (!mounted) return;
       setState(() => _listening = false);
       return;
+    }
+
+    // Если TTS говорит — останавливаем перед голосовым вводом
+    if (_speaking) {
+      await _tts.stop();
+      setState(() => _speaking = false);
     }
 
     setState(() => _listening = true);
@@ -87,7 +108,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final started = await _voice.startListening(
       onResult: (text) {
         if (!mounted) return;
-        // Финальный результат — вставляем и отправляем
         setState(() {
           _controller.text = text;
           _listening = false;
@@ -96,15 +116,31 @@ class _ChatScreenState extends State<ChatScreen> {
       },
       onPartial: (text) {
         if (!mounted) return;
-        // Показываем промежуточный текст в поле ввода
         setState(() => _controller.text = text);
       },
     );
 
-    // Если не удалось запустить (нет разрешения) — сбрасываем
     if (!started && mounted) {
       setState(() => _listening = false);
       _showPermissionSnack();
+    }
+  }
+
+  Future<void> _toggleSpeaking() async {
+    if (_speaking) {
+      await _tts.stop();
+      if (mounted) setState(() => _speaking = false);
+    } else if (_messages.isNotEmpty) {
+      // Перечитать последний ответ AI
+      final lastAI = _messages.lastWhere(
+        (m) => !m.isUser,
+        orElse: () => ChatMessage(text: '', isUser: false),
+      );
+      if (lastAI.text.isNotEmpty) {
+        setState(() => _speaking = true);
+        await _tts.speak(lastAI.text, _persona.type);
+        if (mounted) setState(() => _speaking = false);
+      }
     }
   }
 
@@ -162,14 +198,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Text(
-                'онлайн',
-                style: TextStyle(color: Colors.greenAccent, fontSize: 11),
+              Text(
+                _speaking ? 'говорит...' : 'онлайн',
+                style: TextStyle(
+                  color: _speaking ? AppTheme.accentPurple : Colors.greenAccent,
+                  fontSize: 11,
+                ),
               ),
             ]),
           ]),
         ),
         actions: [
+          // Кнопка TTS — иконка динамика
+          IconButton(
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                _speaking ? Icons.volume_up : Icons.volume_off_outlined,
+                key: ValueKey(_speaking),
+                color: _speaking ? AppTheme.accentPurple : AppTheme.textSecondary,
+              ),
+            ),
+            onPressed: _toggleSpeaking,
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
@@ -441,10 +492,7 @@ class _VoiceButtonState extends State<_VoiceButton>
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
   }
 
   @override
@@ -476,9 +524,7 @@ class _VoiceButtonState extends State<_VoiceButton>
           width: 46, height: 46,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: widget.listening
-                ? AppTheme.accentBlue.withOpacity(0.18)
-                : AppTheme.cardColor,
+            color: widget.listening ? AppTheme.accentBlue.withOpacity(0.18) : AppTheme.cardColor,
             border: Border.all(
               color: widget.listening ? AppTheme.accentBlue : AppTheme.cardBorder,
               width: widget.listening ? 1.5 : 0.5,
