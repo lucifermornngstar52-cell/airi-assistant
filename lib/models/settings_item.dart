@@ -57,10 +57,17 @@ const settingsItems = [
   // ── В разработке ─────────────────────────────────────────────
   SettingsItem(
     title: 'Зрение (Vision)',
-    subtitle: 'Анализ изображений через камеру',
+    subtitle: 'Камера + GPT-4o-mini Vision • анализ фото',
     icon: Icons.visibility_outlined,
     route: '/modules/vision',
-    badge: 'soon',
+    badge: 'active',
+  ),
+  SettingsItem(
+    title: 'Эмоции',
+    subtitle: 'Фронтальная камера • анализ эмоций в реальном времени',
+    icon: Icons.face_retouching_natural_outlined,
+    route: '/modules/emotion',
+    badge: 'active',
   ),
   SettingsItem(
     title: 'Live2D модели',
