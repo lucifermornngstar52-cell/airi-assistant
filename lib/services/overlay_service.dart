@@ -173,4 +173,21 @@ class OverlayService {
     } catch (_) {}
   }
 
+
+  // ─── Toggle для UI ────────────────────────────────────────────────
+  bool _active = false;
+  bool get isActive => _active;
+
+  Future<bool> toggle() async {
+    if (_active) {
+      await hide();
+      _active = false;
+      return false;
+    } else {
+      _active = true;
+      await show();
+      return true;
+    }
+  }
+
 }
