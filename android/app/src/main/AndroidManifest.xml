@@ -11,7 +11,8 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:theme="@style/NormalTheme">
+        android:theme="@style/NormalTheme"
+        android:hardwareAccelerated="true">
 
         <activity
             android:name=".MainActivity"
@@ -29,5 +30,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
+        <service
+            android:name=".AiriOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_FG_SERVICE_TYPE"
+                android:value="specialUse"/>
+        </service>
     </application>
 </manifest>
