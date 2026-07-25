@@ -10,7 +10,6 @@ import '../services/vision_service.dart';
 import '../services/emotion_service.dart';
 import '../services/memory_service.dart';
 import '../services/overlay_service.dart';
-import '../overlay/live2d_overlay.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
