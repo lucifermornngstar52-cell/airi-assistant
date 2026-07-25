@@ -12,8 +12,9 @@
 <body>
 <canvas id="canvas"></canvas>
 <script>
-// ПОЛНОЕ отключение звука от Live2D моделей (как на aika)
+// ПОЛНОЕ отключение звука от Live2D моделей
 (function() {
+  // Патч 1: HTMLAudioElement — полностью заглушаем
   var _origAudio = window.Audio;
   window.Audio = function(src) {
     var a = _origAudio ? new _origAudio(src) : {};
@@ -24,6 +25,8 @@
     return a;
   };
   window.Audio.prototype = _origAudio ? _origAudio.prototype : {};
+
+  // Патч 2: AudioContext — нулевой volume через destination gain
   var AC = window.AudioContext || window.webkitAudioContext;
   if (AC) {
     var _origCreate = AC.prototype.createGain;
@@ -32,7 +35,28 @@
       try { g.gain.setValueAtTime(0, 0); g.gain.value = 0; } catch(_) {}
       return g;
     };
+    // Также мьютим destination напрямую при создании контекста
+    var _origAC = window.AudioContext;
+    var _origWAC = window.webkitAudioContext;
+    function wrapAC(OrigAC) {
+      if (!OrigAC) return OrigAC;
+      function WrappedAC(opts) {
+        var ctx = new OrigAC(opts);
+        try {
+          var g = _origCreate.call(ctx);
+          g.gain.value = 0;
+          ctx.destination && g.connect(ctx.destination);
+        } catch(_) {}
+        return ctx;
+      }
+      WrappedAC.prototype = OrigAC.prototype;
+      return WrappedAC;
+    }
+    window.AudioContext = wrapAC(_origAC);
+    window.webkitAudioContext = wrapAC(_origWAC);
   }
+
+  // Патч 3: HTMLMediaElement.play — глушим все media элементы
   var _origMPlay = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function() {
     this.volume = 0; this.muted = true;
@@ -42,13 +66,29 @@
 </script>
 <script>
 'use strict';
-var app = null, model = null, currentState = 'idle';
-var motionGroups = [], expressions = [], idleTimer = null;
 
+var BASE = (function() {
+  var h = window.location.href;
+  return h.substring(0, h.lastIndexOf('/') + 1);
+})();
+
+var app = null, model = null, currentState = 'idle';
+var motionGroups = [], expressions = [], idleTimer = null, danceTimer = null;
+
+// ── Уведомление Flutter ──────────────────────────────────────────────────────
 function notifyFlutter(msg) {
-  try { window.flutter_inappwebview.callHandler('FlutterChannel', msg); } catch(e) {}
+  try {
+    window.flutter_inappwebview.callHandler('FlutterChannel', msg);
+  } catch(e) {}
 }
 
+// ── Звуки моделей отключены ─────────────────────────────────────────────────
+function ensureAudio() {}
+function playSound(soundPath) {}
+function stopSound() {}
+function getSoundForMotion(groupName, idx) { return null; }
+
+// ── Маппинг состояний ────────────────────────────────────────────────────────
 var STATE_CONFIG = {
   idle:         { group: 'Idle',    exprIdx: -1, autoReset: false },
   listening:    { group: 'Idle',    exprIdx: 2,  autoReset: false },
@@ -56,27 +96,68 @@ var STATE_CONFIG = {
   talking:      { group: 'TapBody', exprIdx: 0,  autoReset: false },
   greeting:     { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
   dance:        { group: 'TapBody', exprIdx: 0,  autoReset: false },
+  notification: { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 5000 },
+  alarm:        { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 5000 },
+  music:        { group: 'TapBody', exprIdx: 0,  autoReset: false },
+  vk:           { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
+  youtube:      { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
+  telegram:     { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
   happy:        { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
   sad:          { group: 'Idle',    exprIdx: 3,  autoReset: true,  resetAfter: 5000 },
+  surprised:    { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 3000 },
+  stretch:      { group: 'Idle',    exprIdx: -1, autoReset: true,  resetAfter: 6000 },
 };
 
 function playMotion(state) {
   if (!model) return;
   clearTimeout(idleTimer);
+  clearInterval(danceTimer);
+
   var cfg = STATE_CONFIG[state] || STATE_CONFIG['idle'];
+
+  if (state === 'dance' || state === 'music') {
+    var di = 0;
+    var doPlay = function() {
+      if (!model || (currentState !== 'dance' && currentState !== 'music')) return;
+      var group = (motionGroups.indexOf('TapBody') >= 0) ? 'TapBody' : (motionGroups[0] || 'Idle');
+      var sz = 1;
+      try { sz = (model.internalModel.settings.motions[group] || []).length || 1; } catch(e) {}
+      var i = di % sz;
+      model.motion(group, i, PIXI.live2d.MotionPriority.NORMAL);
+      di++;
+      danceTimer = setTimeout(doPlay, 2800);
+    };
+    doPlay();
+    if (cfg.exprIdx >= 0 && cfg.exprIdx < expressions.length) {
+      try { model.expression(cfg.exprIdx); } catch(e) {}
+    }
+    return;
+  }
+
   var groupName = cfg.group;
   if (motionGroups.indexOf(groupName) < 0) groupName = motionGroups[0] || 'Idle';
+
   var sz = 1;
   try { sz = (model.internalModel.settings.motions[groupName] || []).length || 1; } catch(e) {}
-  var idx = (state === 'idle' || state === 'listening') ? Math.floor(Math.random() * sz) : 0;
-  var priority = (state === 'idle') ? PIXI.live2d.MotionPriority.IDLE : PIXI.live2d.MotionPriority.NORMAL;
+
+  var idx = (state === 'idle' || state === 'listening')
+    ? Math.floor(Math.random() * sz)
+    : 0;
+
+  var priority = (state === 'idle')
+    ? PIXI.live2d.MotionPriority.IDLE
+    : PIXI.live2d.MotionPriority.NORMAL;
+
   try { model.motion(groupName, idx, priority); } catch(e) {}
+
   if (cfg.exprIdx >= 0 && cfg.exprIdx < expressions.length) {
     try { model.expression(cfg.exprIdx); } catch(e) {}
   }
+
   if (cfg.autoReset) {
     idleTimer = setTimeout(function() {
-      currentState = 'idle'; playMotion('idle');
+      currentState = 'idle';
+      playMotion('idle');
     }, cfg.resetAfter || 4000);
   }
 }
@@ -85,8 +166,9 @@ function fitModel() {
   if (!model || !app) return;
   try {
     var w = app.screen.width, h = app.screen.height;
-    model.x = w * 0.5; model.y = h * 0.6;
-    var origW = (model.internalModel && model.internalModel.originalWidth) || 1000;
+    model.x = w * 0.5;
+    model.y = h * 0.6;
+    var origW = (model.internalModel && model.internalModel.originalWidth)  || 1000;
     var origH = (model.internalModel && model.internalModel.originalHeight) || 1000;
     var scale = Math.min(w / origW, h / origH) * 1.35;
     model.scale.set(scale);
@@ -97,12 +179,13 @@ function detectGroups(m) {
   motionGroups = []; expressions = [];
   try {
     var s = m.internalModel && m.internalModel.settings;
-    if (s && s.motions) motionGroups = Object.keys(s.motions);
-    if (s && s.expressions) expressions = s.expressions.map(function(_,i){ return i; });
+    if (s && s.motions)     motionGroups = Object.keys(s.motions);
+    if (s && s.expressions) expressions  = s.expressions.map(function(_,i){ return i; });
   } catch(e) { motionGroups = ['Idle','TapBody']; }
 }
 
 function loadModelFromPath(path) {
+  stopSound();
   if (model) {
     try { app.stage.removeChild(model); model.destroy(); } catch(e) {}
     model = null; motionGroups = []; expressions = [];
@@ -117,59 +200,97 @@ function loadModelFromPath(path) {
       window.addEventListener('resize', fitModel);
       detectGroups(model);
       model.interactive = true;
-      model.on('pointerdown', function() { window.setAikaState('greeting'); });
+      model.on('pointerdown', function() {
+        ensureAudio();
+        window.setAikaState('greeting');
+      });
       playMotion('idle');
+      // Сообщаем Flutter что модель загружена
       notifyFlutter('modelLoaded');
     })
-    .catch(function(e) { notifyFlutter('modelError'); });
+    .catch(function(e) {
+      notifyFlutter('modelError');
+    });
 }
 
 function loadScript(src) {
   return new Promise(function(resolve, reject) {
     var s = document.createElement('script');
-    s.src = src; s.onload = resolve;
+    s.src = src;
+    s.onload = resolve;
     s.onerror = function() { reject(new Error('fail: ' + src)); };
     document.head.appendChild(s);
   });
 }
 
 function initLive2D() {
-  loadScript('https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js')
+  var _mod = window.module, _exp = window.exports;
+  window.module = undefined; window.exports = undefined;
+
+  loadScript(BASE + 'live2d/live2dcubismcore.min.js')
+    .then(function() { return loadScript(BASE + 'live2d/pixi.min.js'); })
     .then(function() {
       if (!window.PIXI) throw new Error('no PIXI');
-      return loadScript('https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js');
+      return loadScript(BASE + 'live2d/pixi-live2d-display.min.js');
     })
     .then(function() {
+      window.module = _mod; window.exports = _exp;
       if (!PIXI.live2d || !PIXI.live2d.Live2DModel) throw new Error('no live2d');
+
+      // Полностью отключаем звук моделей
       try {
         if (PIXI.live2d.config) PIXI.live2d.config.sound = false;
         if (PIXI.live2d.SoundManager) {
           PIXI.live2d.SoundManager.volume = 0;
+          var origPlay = PIXI.live2d.SoundManager.play;
           PIXI.live2d.SoundManager.play = function() { return { stop: function(){} }; };
         }
       } catch(e) {}
+
       app = new PIXI.Application({
         view: document.getElementById('canvas'),
-        autoStart: true, backgroundAlpha: 0, transparent: true,
-        resizeTo: window, antialias: true,
+        autoStart: true,
+        backgroundAlpha: 0,
+        transparent: true,
+        resizeTo: window,
+        antialias: true,
         resolution: window.devicePixelRatio || 1,
       });
       try { PIXI.live2d.Live2DModel.registerTicker(PIXI.Ticker); } catch(e) {}
-      notifyFlutter('ready');
+      // Загружаем дефолтную модель — Flutter потом переключит через switchBuiltinModel
+      return loadModelFromPath(BASE + 'models/Natori/Natori.model3.json');
     })
-    .catch(function(e) { notifyFlutter('initError'); });
+    .catch(function(e) {
+      window.module = _mod; window.exports = _exp;
+      notifyFlutter('modelError');
+    });
 }
 
+// ── Public API ────────────────────────────────────────────────────────────────
 window.setAikaState = function(state) {
   currentState = state || 'idle';
   if (model) playMotion(currentState);
 };
-window.loadCustomModel = function(url) { if (app) return loadModelFromPath(url); };
-window.switchBuiltinModel = function(p) { if (app) return loadModelFromPath(p); };
-window.switchModel = window.loadCustomModel;
-window.handleResize = function() { if (app) { app.renderer.resize(window.innerWidth, window.innerHeight); fitModel(); } };
+window.loadCustomModel = function(url) {
+  if (app) return loadModelFromPath(url);
+};
+window.switchBuiltinModel = function(p) {
+  if (app) return loadModelFromPath(BASE + p);
+};
+window.switchModel = window.switchBuiltinModel;
 
+window.playNotification = function() { window.setAikaState('notification'); };
+window.playGreeting     = function() { window.setAikaState('greeting'); };
+window.playDance        = function() { window.setAikaState('dance'); };
+window.playMusic        = function() { window.setAikaState('music'); };
+window.playAlarm        = function() { window.setAikaState('alarm'); };
+window.playSurprised    = function() { window.setAikaState('surprised'); };
+window.externalPlaySound = function(path) { playSound(path); };
+window.externalStopSound = function() { stopSound(); };
+
+// Запуск — без задержки, сразу как DOM готов
 initLive2D();
 </script>
 </body>
 </html>
+
