@@ -1,68 +1,50 @@
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'package:flutter/foundation.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'live2d_service.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// OverlayService — включает/выключает Live2D оверлей поверх всех приложений.
+/// OverlayService — управляет нативным Live2D оверлеем через MethodChannel.
+/// Тот же подход что на aika-assistant.
 class OverlayService {
-  static final OverlayService _instance = OverlayService._();
-  factory OverlayService() => _instance;
+  static final OverlayService _i = OverlayService._();
+  factory OverlayService() => _i;
   OverlayService._();
 
-  final _live2d = Live2DService();
+  static const _channel = MethodChannel('com.airi.assistant/overlay');
   bool _active = false;
   bool get isActive => _active;
 
-  /// Проверить разрешение SYSTEM_ALERT_WINDOW
   Future<bool> hasPermission() async {
-    return true;
+    try {
+      return await _channel.invokeMethod('hasPermission') ?? false;
+    } catch (_) { return false; }
   }
 
-  /// Запросить разрешение на overlay
   Future<bool> requestPermission() async {
-    final status = await Permission.systemAlertWindow.request();
-    return status.isGranted;
+    try {
+      return await _channel.invokeMethod('requestPermission') ?? false;
+    } catch (_) { return false; }
   }
 
-  /// Включить оверлей
-  Future<bool> show() async {
+  Future<bool> show({String state = 'idle'}) async {
     if (_active) return true;
-
-    // Проверяем разрешение
-    final hasPermission = await requestPermission();
-    if (!hasPermission) {
-      debugPrint('[Overlay] нет разрешения SYSTEM_ALERT_WINDOW');
+    final hasPerm = await hasPermission();
+    if (!hasPerm) {
+      await requestPermission();
       return false;
     }
-
-    final size = await _live2d.getModelSize();
-    final width = size.round();
-    final height = (size * 1.4).round();
-
-    await FlutterOverlayWindow.showOverlay(
-      enableDrag: true,
-      overlayTitle: 'AIRI',
-      overlayContent: 'Модель загружается...',
-      flag: OverlayFlag.defaultFlag,
-      visibility: NotificationVisibility.visibilityPublic,
-      positionGravity: PositionGravity.auto,
-      height: height,
-      width: width,
-      startPosition: OverlayPosition(0, 0),
-    );
-    _active = true;
-    debugPrint('[Overlay] показан (${width}x${height})');
-    return true;
+    try {
+      await _channel.invokeMethod('showOverlay', {'state': state});
+      _active = true;
+      return true;
+    } catch (_) { return false; }
   }
 
-  /// Выключить оверлей
   Future<void> hide() async {
-    await FlutterOverlayWindow.closeOverlay();
-    _active = false;
-    debugPrint('[Overlay] скрыт');
+    try {
+      await _channel.invokeMethod('hideOverlay');
+      _active = false;
+    } catch (_) {}
   }
 
-  /// Переключить
   Future<bool> toggle() async {
     if (_active) {
       await hide();
@@ -72,15 +54,23 @@ class OverlayService {
     }
   }
 
-  /// Отправить сообщение в оверлей
-  Future<void> sendMessage(String msg) async {
-    FlutterOverlayWindow.shareData(msg);
+  Future<void> setState(String state) async {
+    try { await _channel.invokeMethod('updateOverlay', {'state': state}); } catch (_) {}
   }
 
-  /// Изменить размер оверлея
-  Future<void> resize(double size) async {
-    await _live2d.setModelSize(size);
-    await FlutterOverlayWindow.resizeOverlay(size.round(), (size * 1.4).round(), true);
-    await sendMessage('size:$size');
+  Future<void> setSize(double size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('live2d_model_size', size);
+    try { await _channel.invokeMethod('configOverlay', {'size': size}); } catch (_) {}
+  }
+
+  Future<void> switchModel(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('live2d_model_url', url);
+    try { await _channel.invokeMethod('switchModel', {'model_url': url}); } catch (_) {}
+  }
+
+  Future<void> setDragEnabled(bool enabled) async {
+    try { await _channel.invokeMethod('setDragEnabled', {'enabled': enabled}); } catch (_) {}
   }
 }
