@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; background:transparent !important; overflow:hidden; }
+  canvas { display:block; width:100%; height:100%; background:transparent; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+// ПОЛНОЕ отключение звука от Live2D моделей (как на aika)
+(function() {
+  var _origAudio = window.Audio;
+  window.Audio = function(src) {
+    var a = _origAudio ? new _origAudio(src) : {};
+    try { a.volume = 0; a.muted = true; } catch(_) {}
+    a.play  = function() { return Promise.resolve(); };
+    a.pause = function() {};
+    a.load  = function() {};
+    return a;
+  };
+  window.Audio.prototype = _origAudio ? _origAudio.prototype : {};
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (AC) {
+    var _origCreate = AC.prototype.createGain;
+    AC.prototype.createGain = function() {
+      var g = _origCreate.call(this);
+      try { g.gain.setValueAtTime(0, 0); g.gain.value = 0; } catch(_) {}
+      return g;
+    };
+  }
+  var _origMPlay = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function() {
+    this.volume = 0; this.muted = true;
+    return _origMPlay ? _origMPlay.call(this) : Promise.resolve();
+  };
+})();
+</script>
+<script>
+'use strict';
+var app = null, model = null, currentState = 'idle';
+var motionGroups = [], expressions = [], idleTimer = null;
+
+function notifyFlutter(msg) {
+  try { window.flutter_inappwebview.callHandler('FlutterChannel', msg); } catch(e) {}
+}
+
+var STATE_CONFIG = {
+  idle:         { group: 'Idle',    exprIdx: -1, autoReset: false },
+  listening:    { group: 'Idle',    exprIdx: 2,  autoReset: false },
+  thinking:     { group: 'Idle',    exprIdx: 1,  autoReset: false },
+  talking:      { group: 'TapBody', exprIdx: 0,  autoReset: false },
+  greeting:     { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
+  dance:        { group: 'TapBody', exprIdx: 0,  autoReset: false },
+  happy:        { group: 'TapBody', exprIdx: 0,  autoReset: true,  resetAfter: 4000 },
+  sad:          { group: 'Idle',    exprIdx: 3,  autoReset: true,  resetAfter: 5000 },
+};
+
+function playMotion(state) {
+  if (!model) return;
+  clearTimeout(idleTimer);
+  var cfg = STATE_CONFIG[state] || STATE_CONFIG['idle'];
+  var groupName = cfg.group;
+  if (motionGroups.indexOf(groupName) < 0) groupName = motionGroups[0] || 'Idle';
+  var sz = 1;
+  try { sz = (model.internalModel.settings.motions[groupName] || []).length || 1; } catch(e) {}
+  var idx = (state === 'idle' || state === 'listening') ? Math.floor(Math.random() * sz) : 0;
+  var priority = (state === 'idle') ? PIXI.live2d.MotionPriority.IDLE : PIXI.live2d.MotionPriority.NORMAL;
+  try { model.motion(groupName, idx, priority); } catch(e) {}
+  if (cfg.exprIdx >= 0 && cfg.exprIdx < expressions.length) {
+    try { model.expression(cfg.exprIdx); } catch(e) {}
+  }
+  if (cfg.autoReset) {
+    idleTimer = setTimeout(function() {
+      currentState = 'idle'; playMotion('idle');
+    }, cfg.resetAfter || 4000);
+  }
+}
+
+function fitModel() {
+  if (!model || !app) return;
+  try {
+    var w = app.screen.width, h = app.screen.height;
+    model.x = w * 0.5; model.y = h * 0.6;
+    var origW = (model.internalModel && model.internalModel.originalWidth) || 1000;
+    var origH = (model.internalModel && model.internalModel.originalHeight) || 1000;
+    var scale = Math.min(w / origW, h / origH) * 1.35;
+    model.scale.set(scale);
+  } catch(e) {}
+}
+
+function detectGroups(m) {
+  motionGroups = []; expressions = [];
+  try {
+    var s = m.internalModel && m.internalModel.settings;
+    if (s && s.motions) motionGroups = Object.keys(s.motions);
+    if (s && s.expressions) expressions = s.expressions.map(function(_,i){ return i; });
+  } catch(e) { motionGroups = ['Idle','TapBody']; }
+}
+
+function loadModelFromPath(path) {
+  if (model) {
+    try { app.stage.removeChild(model); model.destroy(); } catch(e) {}
+    model = null; motionGroups = []; expressions = [];
+  }
+  return PIXI.live2d.Live2DModel.from(path, { autoInteract: false, autoUpdate: true })
+    .then(function(m) {
+      model = m;
+      app.stage.addChild(model);
+      model.anchor.set(0.5, 0.5);
+      fitModel();
+      window.removeEventListener('resize', fitModel);
+      window.addEventListener('resize', fitModel);
+      detectGroups(model);
+      model.interactive = true;
+      model.on('pointerdown', function() { window.setAikaState('greeting'); });
+      playMotion('idle');
+      notifyFlutter('modelLoaded');
+    })
+    .catch(function(e) { notifyFlutter('modelError'); });
+}
+
+function loadScript(src) {
+  return new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = src; s.onload = resolve;
+    s.onerror = function() { reject(new Error('fail: ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+
+function initLive2D() {
+  loadScript('https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js')
+    .then(function() {
+      if (!window.PIXI) throw new Error('no PIXI');
+      return loadScript('https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js');
+    })
+    .then(function() {
+      if (!PIXI.live2d || !PIXI.live2d.Live2DModel) throw new Error('no live2d');
+      try {
+        if (PIXI.live2d.config) PIXI.live2d.config.sound = false;
+        if (PIXI.live2d.SoundManager) {
+          PIXI.live2d.SoundManager.volume = 0;
+          PIXI.live2d.SoundManager.play = function() { return { stop: function(){} }; };
+        }
+      } catch(e) {}
+      app = new PIXI.Application({
+        view: document.getElementById('canvas'),
+        autoStart: true, backgroundAlpha: 0, transparent: true,
+        resizeTo: window, antialias: true,
+        resolution: window.devicePixelRatio || 1,
+      });
+      try { PIXI.live2d.Live2DModel.registerTicker(PIXI.Ticker); } catch(e) {}
+      notifyFlutter('ready');
+    })
+    .catch(function(e) { notifyFlutter('initError'); });
+}
+
+window.setAikaState = function(state) {
+  currentState = state || 'idle';
+  if (model) playMotion(currentState);
+};
+window.loadCustomModel = function(url) { if (app) return loadModelFromPath(url); };
+window.switchBuiltinModel = function(p) { if (app) return loadModelFromPath(p); };
+window.switchModel = window.loadCustomModel;
+window.handleResize = function() { if (app) { app.renderer.resize(window.innerWidth, window.innerHeight); fitModel(); } };
+
+initLive2D();
+</script>
+</body>
+</html>
