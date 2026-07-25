@@ -2,10 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import '../services/live2d_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Live2D Overlay — виджет который показывается поверх всех приложений.
-/// Запускается как отдельный Flutter entry point (@pragma('vm:entry-point')).
 @pragma('vm:entry-point')
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +12,6 @@ void overlayMain() {
 
 class Live2DOverlayApp extends StatelessWidget {
   const Live2DOverlayApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -26,23 +23,23 @@ class Live2DOverlayApp extends StatelessWidget {
 
 class Live2DOverlayScreen extends StatefulWidget {
   const Live2DOverlayScreen({super.key});
-  @override State<Live2DOverlayScreen> createState() => _Live2DOverlayScreenState();
+  @override
+  State<Live2DOverlayScreen> createState() => _Live2DOverlayScreenState();
 }
 
 class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
   InAppWebViewController? _webController;
-  final _live2d = Live2DService();
+  String _modelUrl = '';
   double _modelSize = 250;
   double _windowWidth = 250;
   double _windowHeight = 350;
-  bool _modelLoaded = false;
+  bool _ready = false;
   bool _showControls = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
-    // Слушаем сообщения из основного приложения
     FlutterOverlayWindow.overlayListener.listen((msg) {
       if (msg == 'hide') {
         FlutterOverlayWindow.closeOverlay();
@@ -51,12 +48,18 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
       } else if (msg.toString().startsWith('size:')) {
         final size = double.tryParse(msg.toString().split(':')[1]);
         if (size != null) _updateSize(size);
+      } else if (msg.toString().startsWith('model:')) {
+        final url = msg.toString().substring(6);
+        _loadModelUrl(url);
       }
     });
   }
 
   Future<void> _loadSettings() async {
-    _modelSize = await _live2d.getModelSize();
+    final prefs = await SharedPreferences.getInstance();
+    _modelUrl = prefs.getString('live2d_model_url') ??
+        'https://cdn.jsdelivr.net/gh/Eikanya/Live2d-model/Live2D/Senko_Normals/senko.model3.json';
+    _modelSize = prefs.getDouble('live2d_model_size') ?? 250.0;
     _windowWidth = _modelSize;
     _windowHeight = _modelSize * 1.4;
     if (mounted) setState(() {});
@@ -66,20 +69,23 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
     _modelSize = newSize;
     _windowWidth = newSize;
     _windowHeight = newSize * 1.4;
-    await _live2d.setModelSize(newSize);
-    await FlutterOverlayWindow.resizeOverlay(_windowWidth.round(), _windowHeight.round(), true);
-
-    // Отправляем в WebView
-    _webController?.evaluateJavascript(
-      source: 'handleResize($_windowWidth, $_windowHeight)',
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('live2d_model_size', newSize);
+    await FlutterOverlayWindow.resizeOverlay(
+      _windowWidth.round(), _windowHeight.round(), true
     );
+    _webController?.evaluateJavascript(source: 'handleResize()');
     if (mounted) setState(() {});
   }
 
-  @override
-  void dispose() {
-    _webController?.dispose();
-    super.dispose();
+  void _loadModelUrl(String url) async {
+    _modelUrl = url;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('live2d_model_url', url);
+    // Ждём 1200мс как на aika — PIXI.js должен быть готов
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _webController?.evaluateJavascript(source: "loadCustomModel('$url')");
+    });
   }
 
   @override
@@ -87,40 +93,53 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
     return Material(
       color: Colors.transparent,
       child: GestureDetector(
-        onTap: () {
-          setState(() => _showControls = !_showControls);
-        },
+        onTap: () => setState(() => _showControls = !_showControls),
         child: Container(
           width: _windowWidth,
           height: _windowHeight,
-          decoration: const BoxDecoration(
-            color: Colors.transparent,
-          ),
+          decoration: const BoxDecoration(color: Colors.transparent),
           child: Stack(
             children: [
-              // WebView с Live2D моделью
               InAppWebView(
+                initialFile: 'assets/live2d_viewer.html',
                 initialSettings: InAppWebViewSettings(
                   transparentBackground: true,
-                  supportZoom: false,
-                  allowsInlineMediaPlayback: true,
-                  allowsBackForwardNavigationGestures: false,
-                  iframeAllow: 'autoplay; camera; microphone',
+                  javaScriptEnabled: true,
+                  mediaPlaybackRequiresUserGesture: false,
+                  allowFileAccessFromFileURLs: true,
+                  allowUniversalAccessFromFileURLs: true,
+                  mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                  useHybridComposition: true,
+                  disableDefaultErrorPage: true,
+                  allowContentAccess: true,
                 ),
-                onWebViewCreated: (controller) {
-                  _webController = controller;
-                  _loadModel();
+                onWebViewCreated: (ctrl) {
+                  _webController = ctrl;
+                  ctrl.addJavaScriptHandler(
+                    handlerName: 'FlutterChannel',
+                    callback: (args) {
+                      final msg = args.isNotEmpty ? args[0].toString() : '';
+                      debugPrint('[Overlay] $msg');
+                      if (msg == 'ready') {
+                        // PIXI.js готов — загружаем модель через 1200мс
+                        Future.delayed(const Duration(milliseconds: 1200), () {
+                          _webController?.evaluateJavascript(
+                            source: "loadCustomModel('$_modelUrl')"
+                          );
+                        });
+                      } else if (msg == 'modelLoaded') {
+                        if (mounted) setState(() => _ready = true);
+                      }
+                    },
+                  );
                 },
-                onConsoleMessage: (controller, message) {
-                  debugPrint('[Overlay WebView] ${message.message}');
+                onConsoleMessage: (ctrl, msg) {
+                  debugPrint('[Overlay WebView] ${msg.message}');
                 },
               ),
-
-              // Контролы (показываются по тапу)
               if (_showControls)
                 Positioned(
-                  top: 4,
-                  right: 4,
+                  top: 4, right: 4,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -130,7 +149,6 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Слайдер размера
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -138,9 +156,7 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
                             SizedBox(
                               width: 120,
                               child: Slider(
-                                value: _modelSize,
-                                min: 120,
-                                max: 400,
+                                value: _modelSize, min: 120, max: 400,
                                 onChanged: _updateSize,
                                 activeColor: Colors.blue,
                               ),
@@ -148,7 +164,6 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        // Кнопка закрытия
                         GestureDetector(
                           onTap: () => FlutterOverlayWindow.closeOverlay(),
                           child: Container(
@@ -171,9 +186,7 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
                     ),
                   ),
                 ),
-
-              // Индикатор загрузки
-              if (!_modelLoaded && !_showControls)
+              if (!_ready && !_showControls)
                 const Positioned.fill(
                   child: Center(
                     child: SizedBox(
@@ -186,35 +199,6 @@ class _Live2DOverlayScreenState extends State<Live2DOverlayScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Future<void> _loadModel() async {
-    final modelUrl = await _live2d.getModelUrl();
-    final html = _live2d.generateHtml(modelUrl, _modelSize);
-
-    if (_webController == null) return;
-
-    await _webController!.loadData(
-      data: html,
-      mimeType: 'text/html',
-      encoding: 'utf-8',
-      baseUrl: WebUri('https://localhost/'),
-    );
-
-    // Регистрируем хендлеры
-    _webController!.addJavaScriptHandler(
-      handlerName: 'onModelLoaded',
-      callback: (args) {
-        debugPrint('[Overlay] Live2D model loaded!');
-        if (mounted) setState(() => _modelLoaded = true);
-      },
-    );
-    _webController!.addJavaScriptHandler(
-      handlerName: 'onModelError',
-      callback: (args) {
-        debugPrint('[Overlay] Live2D error: $args');
-      },
     );
   }
 }
