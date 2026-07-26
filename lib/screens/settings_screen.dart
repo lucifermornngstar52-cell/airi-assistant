@@ -6,6 +6,10 @@ import '../theme/app_theme.dart';
 import 'persona_screen.dart';
 import 'providers_screen.dart';
 import '../services/live2d_service.dart';
+import 'currency_screen.dart';
+import 'weather_screen.dart';
+import 'schedule_screen.dart';
+import 'mood_diary_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -139,6 +143,90 @@ class SettingsScreen extends StatelessWidget {
         break;
       case '/models':
         screen = const Live2DSettingsScreen();
+        break;
+      case '/ext/currency':
+        screen = const CurrencyScreen();
+        break;
+      case '/ext/weather':
+        screen = const WeatherScreen();
+        break;
+      case '/ext/schedule':
+        screen = const ScheduleScreen();
+        break;
+      case '/ext/mooddiary':
+        screen = const MoodDiaryScreen();
+        break;
+      case '/ext/websearch':
+        screen = const _ModuleDetailScreen(
+          title: 'Веб-поиск',
+          icon: Icons.search,
+          items: [
+            ('Движок', 'GPT-4o-mini + web search tool'),
+            ('Запросы', 'Через чат — "найди в интернете..."'),
+            ('Результаты', 'Краткая выжимка + ссылки'),
+            ('Интеграция', 'Автоматически при вопросах о фактах'),
+          ],
+        );
+        break;
+      case '/ext/news':
+        screen = const _ModuleDetailScreen(
+          title: 'Новости',
+          icon: Icons.article_outlined,
+          items: [
+            ('Источник', 'RSS-ленты + API'),
+            ('Категории', 'Технологии, мир, спорт, экономика'),
+            ('Запрос', 'Через чат — "что нового?" или "новости"'),
+            ('Формат', 'Краткая выжимка топ-5 новостей'),
+          ],
+        );
+        break;
+      case '/ext/reminders':
+        screen = const _ModuleDetailScreen(
+          title: 'Напоминания',
+          icon: Icons.notifications_outlined,
+          items: [
+            ('Хранилище', 'Локально (SharedPreferences)'),
+            ('Уведомления', 'Локальные push-уведомления'),
+            ('Запрос', 'Через чат — "напомни мне..."'),
+            ('Повтор', 'Однократные и повторяющиеся'),
+          ],
+        );
+        break;
+      case '/ext/shoplist':
+        screen = const _ModuleDetailScreen(
+          title: 'Список покупок',
+          icon: Icons.shopping_cart_outlined,
+          items: [
+            ('Хранилище', 'Локально (SharedPreferences)'),
+            ('Категории', 'Продукты, быт, прочее'),
+            ('Запрос', 'Через чат — "добавь в список покупок..."'),
+            ('Голос', 'Добавление голосом через STT'),
+          ],
+        );
+        break;
+      case '/ext/personality':
+        screen = const _ModuleDetailScreen(
+          title: 'Личность AI',
+          icon: Icons.psychology_outlined,
+          items: [
+            ('Модель', 'PersonalityService — эволюция характера'),
+            ('Персонажи', 'Aika и Gabimaru — разные личности'),
+            ('Параметры', 'Усталость, история, время суток'),
+            ('Влияние', 'Тон и стиль ответа меняются динамически'),
+            ('Память', 'Запоминание взаимодействий'),
+          ],
+        );
+        break;
+      case '/ext/clipboard':
+        screen = const _ModuleDetailScreen(
+          title: 'Буфер обмена',
+          icon: Icons.content_copy,
+          items: [
+            ('Функция', 'Чтение и запись буфера обмена'),
+            ('Запрос', 'Через чат — "скопируй" или "вставь"'),
+            ('Интеграция', 'AI может копировать текст для пользователя'),
+          ],
+        );
         break;
       default:
         screen = _PlaceholderScreen(route: route);
