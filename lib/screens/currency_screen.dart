@@ -35,9 +35,9 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AikaTheme.background,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AikaTheme.background,
+        backgroundColor: AppTheme.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
@@ -47,7 +47,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: AikaTheme.neonBlue),
+            icon: Icon(Icons.refresh, color: AppTheme.neonBlue),
             onPressed: _load,
           ),
         ],
@@ -61,19 +61,19 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: AikaTheme.neonBlue.withOpacity(0.08),
+                color: AppTheme.neonBlue.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AikaTheme.neonBlue.withOpacity(0.25)),
+                border: Border.all(color: AppTheme.neonBlue.withOpacity(0.25)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.currency_exchange, color: AikaTheme.neonBlue, size: 18),
+                  Icon(Icons.currency_exchange, color: AppTheme.neonBlue, size: 18),
                   const SizedBox(width: 10),
                   Text(
                     _lastUpdated != null
                         ? 'Обновлено: ${_lastUpdated!.hour.toString().padLeft(2,'0')}:${_lastUpdated!.minute.toString().padLeft(2,'0')}'
                         : 'Курсы к рублю (RUB)',
-                    style: TextStyle(color: AikaTheme.neonBlue, fontSize: 13),
+                    style: TextStyle(color: AppTheme.neonBlue, fontSize: 13),
                   ),
                   const Spacer(),
                   Text('open.er-api.com',
@@ -84,7 +84,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
             // Список
             Expanded(
               child: _isLoading
-                  ? Center(child: CircularProgressIndicator(color: AikaTheme.neonBlue))
+                  ? Center(child: CircularProgressIndicator(color: AppTheme.neonBlue))
                   : _error != null
                       ? _ErrorView(error: _error!, onRetry: _load)
                       : ListView.separated(
