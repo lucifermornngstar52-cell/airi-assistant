@@ -43,7 +43,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          backgroundColor: AikaTheme.card,
+          backgroundColor: AppTheme.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('➕ Новое событие', style: TextStyle(color: Colors.white)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -53,8 +53,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
               decoration: const InputDecoration(
                 hintText: 'Название события',
                 hintStyle: TextStyle(color: Colors.white38),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AikaTheme.neonBlue)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AikaTheme.neonPink)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.neonBlue)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.neonPink)),
               ),
             ),
             const SizedBox(height: 12),
@@ -64,8 +64,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
               decoration: const InputDecoration(
                 hintText: 'Заметка (необязательно)',
                 hintStyle: TextStyle(color: Colors.white38),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AikaTheme.neonBlue)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AikaTheme.neonPink)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.neonBlue)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.neonPink)),
               ),
             ),
             const SizedBox(height: 12),
@@ -77,7 +77,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                     context: ctx,
                     initialTime: TimeOfDay(hour: hour, minute: minute),
                     builder: (c, child) => Theme(
-                      data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: AikaTheme.neonBlue)),
+                      data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: AppTheme.neonBlue)),
                       child: child!,
                     ),
                   );
@@ -85,7 +85,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
                 },
                 child: Text(
                   '${hour.toString().padLeft(2,'0')}:${minute.toString().padLeft(2,'0')}',
-                  style: const TextStyle(color: AikaTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: AppTheme.neonBlue, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ]),
@@ -93,7 +93,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
               const Text('Завтра', style: TextStyle(color: Colors.white70)),
               Switch(
                 value: tomorrow,
-                activeColor: AikaTheme.neonPink,
+                activeColor: AppTheme.neonPink,
                 onChanged: (v) => setS(() => tomorrow = v),
               ),
             ]),
@@ -101,7 +101,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена', style: TextStyle(color: Colors.white54))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AikaTheme.neonBlue),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonBlue),
               onPressed: () async {
                 if (titleCtrl.text.trim().isEmpty) return;
                 final now = DateTime.now();
@@ -128,27 +128,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AikaTheme.background,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AikaTheme.background,
+        backgroundColor: AppTheme.background,
         elevation: 0,
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white70), onPressed: () => Navigator.pop(context)),
         title: const Text('📅 Расписание', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
         bottom: TabBar(
           controller: _tabs,
-          indicatorColor: AikaTheme.neonBlue,
+          indicatorColor: AppTheme.neonBlue,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white38,
           tabs: const [Tab(text: 'Сегодня'), Tab(text: 'Завтра')],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: AikaTheme.neonBlue,
+        backgroundColor: AppTheme.neonBlue,
         onPressed: _addEventDialog,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AikaTheme.neonBlue))
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.neonBlue))
           : TabBarView(
               controller: _tabs,
               children: [
@@ -190,18 +190,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AikaTheme.card,
+              color: AppTheme.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AikaTheme.neonBlue.withOpacity(0.25)),
+              border: Border.all(color: AppTheme.neonBlue.withOpacity(0.25)),
             ),
             child: Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AikaTheme.neonBlue.withOpacity(0.15),
+                  color: AppTheme.neonBlue.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(e.timeStr, style: const TextStyle(color: AikaTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 15)),
+                child: Text(e.timeStr, style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 15)),
               ),
               const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
