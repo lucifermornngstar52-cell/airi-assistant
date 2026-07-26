@@ -119,11 +119,11 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AikaTheme.neonBlue.withOpacity(0.2),
+                    color: AppTheme.neonBlue.withOpacity(0.2),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AikaTheme.neonBlue.withOpacity(0.5)),
+                    border: Border.all(color: AppTheme.neonBlue.withOpacity(0.5)),
                   ),
-                  child: const Icon(Icons.my_location, color: AikaTheme.neonBlue, size: 20),
+                  child: const Icon(Icons.my_location, color: AppTheme.neonBlue, size: 20),
                 ),
               ),
             ]),
@@ -131,7 +131,7 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
 
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AikaTheme.neonBlue))
+                ? const Center(child: CircularProgressIndicator(color: AppTheme.neonBlue))
                 : _error != null
                     ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
                     : FadeTransition(
@@ -170,7 +170,7 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
       child: Column(children: [
         // Город
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.location_on, color: AikaTheme.neonBlue, size: 16),
+          const Icon(Icons.location_on, color: AppTheme.neonBlue, size: 16),
           const SizedBox(width: 4),
           Text('${w.city}, ${w.country}',
               style: const TextStyle(color: Colors.white70, fontSize: 16, letterSpacing: 0.5)),
