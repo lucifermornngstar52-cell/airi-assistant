@@ -48,7 +48,7 @@ class _MoodDiaryScreenState extends State<MoodDiaryScreen> {
 
   Color _moodColor(int score) {
     if (score >= 8) return const Color(0xFF4CAF50);
-    if (score >= 6) return AikaTheme.neonBlue;
+    if (score >= 6) return AppTheme.neonBlue;
     if (score >= 4) return Colors.orange;
     return Colors.redAccent;
   }
@@ -64,9 +64,9 @@ class _MoodDiaryScreenState extends State<MoodDiaryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AikaTheme.background,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AikaTheme.background,
+        backgroundColor: AppTheme.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
@@ -78,7 +78,7 @@ class _MoodDiaryScreenState extends State<MoodDiaryScreen> {
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AikaTheme.neonBlue))
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.neonBlue))
           : _entries.isEmpty
               ? _buildEmpty()
               : Column(
@@ -120,10 +120,10 @@ class _MoodDiaryScreenState extends State<MoodDiaryScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AikaTheme.neonBlue.withOpacity(0.2), AikaTheme.neonPink.withOpacity(0.1)],
+          colors: [AppTheme.neonBlue.withOpacity(0.2), AppTheme.neonPink.withOpacity(0.1)],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AikaTheme.neonBlue.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.neonBlue.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -158,7 +158,7 @@ class _MoodDiaryScreenState extends State<MoodDiaryScreen> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: AikaTheme.card,
+            color: AppTheme.card,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _moodColor(score).withOpacity(0.3)),
           ),
