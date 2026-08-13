@@ -78,7 +78,7 @@ class VisionService {
     return 'image/jpeg';
   }
 
-  /// Отправить фото + текст в GPT-5 Vision
+  /// Отправить фото + текст в GPT-4o-mini Vision
   /// [prompt] — что спросить про фото
   /// Возвращает текстовый ответ
   Future<String> analyzeImage(File image, String prompt) async {
@@ -99,7 +99,7 @@ class VisionService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-5',
+          'model': 'gpt-4o-mini',
           'messages': [
             {
               'role': 'user',
@@ -151,7 +151,7 @@ class VisionService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-5',
+          'model': 'gpt-4o-mini',
           'messages': [
             {
               'role': 'system',
