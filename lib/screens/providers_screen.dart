@@ -82,7 +82,7 @@ class _ProvidersScreenState extends State<ProvidersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'OpenAI GPT-4o-mini',
+                    'OpenAI GPT-5',
                     style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   SizedBox(height: 3),
