@@ -10,6 +10,7 @@ import 'currency_screen.dart';
 import 'weather_screen.dart';
 import 'schedule_screen.dart';
 import 'mood_diary_screen.dart';
+import 'scenes_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -227,6 +228,9 @@ class SettingsScreen extends StatelessWidget {
             ('Интеграция', 'AI может копировать текст для пользователя'),
           ],
         );
+        break;
+      case '/scenes':
+        screen = const ScenesScreen();
         break;
       default:
         screen = _PlaceholderScreen(route: route);
