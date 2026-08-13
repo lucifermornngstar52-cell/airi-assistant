@@ -70,9 +70,20 @@ class EmotionService {
 
   bool get isActive => _active;
 
+  int _errorCount = 0;
+  static const int _maxErrors = 3;
+
   void _check() async {
     if (!_active || !_camReady || _camController == null) {
       _scheduleNext();
+      return;
+    }
+
+    // Если太多 ошибок подряд — пауза на 60 сек
+    if (_errorCount >= _maxErrors) {
+      debugPrint('[Emotion] слишком много ошибок, пауза 60 сек');
+      _errorCount = 0;
+      if (_active) _timer = Timer(const Duration(seconds: 60), _check);
       return;
     }
 
@@ -81,16 +92,23 @@ class EmotionService {
       final photo = File(xfile.path);
 
       final emotion = await _vision.analyzeEmotion(photo);
-      debugPrint('[Emotion] результат: $emotion');
 
-      if (emotion != null && emotion != _lastEmotion) {
-        _lastEmotion = emotion;
-        onEmotionDetected?.call(emotion);
+      if (emotion != null) {
+        _errorCount = 0;
+        debugPrint('[Emotion] результат: $emotion');
+        if (emotion != _lastEmotion) {
+          _lastEmotion = emotion;
+          onEmotionDetected?.call(emotion);
+        }
+      } else {
+        _errorCount++;
+        debugPrint('[Emotion] нет результата, ошибки: $_errorCount/$_maxErrors');
       }
 
       try { await photo.delete(); } catch (_) {}
     } catch (e) {
-      debugPrint('[Emotion] ошибка съёмки: $e');
+      _errorCount++;
+      debugPrint('[Emotion] ошибка: $e ($_errorCount/$_maxErrors)');
     }
 
     _scheduleNext();
