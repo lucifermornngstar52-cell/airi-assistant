@@ -86,9 +86,14 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadPersona() async {
     final type = await _ai.loadPersona();
     if (!mounted) return;
-    setState(() {
+    setState {
       _persona = allPersonas.firstWhere((p) => p.type == type);
     });
+    // Устанавливаем модель оверлея: Airi → Hiyori, Jarvis → Natori
+    final modelPath = _persona.type == PersonaType.cute
+        ? 'models/Hiyori/Hiyori.model3.json'
+        : 'models/Natori/Natori.model3.json';
+    _overlay.switchModel(modelPath);
   }
 
   Future<void> _send() async {
