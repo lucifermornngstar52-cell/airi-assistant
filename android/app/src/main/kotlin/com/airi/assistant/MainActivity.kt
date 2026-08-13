@@ -124,6 +124,21 @@ class MainActivity : FlutterActivity() {
                     ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
+                "launchApp" -> {
+                    val pkg = call.argument<String>("package") ?: ""
+                    try {
+                        val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(launchIntent)
+                            result.success(true)
+                        } else {
+                            result.success(false)
+                        }
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
