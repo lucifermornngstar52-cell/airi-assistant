@@ -184,6 +184,15 @@ class OverlayService {
       _active = false;
       return false;
     } else {
+      // Проверяем permission перед запуском
+      final hasPerm = await hasPermission();
+      if (!hasPerm) {
+        await requestPermission();
+        // Ждём немного чтобы пользователь успел дать разрешение
+        await Future.delayed(const Duration(milliseconds: 500));
+        final recheck = await hasPermission();
+        if (!recheck) return false;
+      }
       _active = true;
       await show();
       return true;
