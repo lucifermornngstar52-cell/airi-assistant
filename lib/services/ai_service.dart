@@ -37,7 +37,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-5',
+          'model': 'gpt-4o-mini',
           'messages': messages,
           'max_tokens': 1000,
           'temperature': 0.85,
@@ -81,7 +81,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-5',
+          'model': 'gpt-4o-mini',
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {
@@ -142,7 +142,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-5',
+          'model': 'gpt-4o-mini',
           'messages': messages,
           'max_tokens': 1000,
           'temperature': 0.85,
