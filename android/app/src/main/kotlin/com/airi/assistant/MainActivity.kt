@@ -6,6 +6,7 @@ import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.core.content.ContextCompat
 
 class MainActivity : FlutterActivity() {
 
@@ -34,13 +35,13 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_SHOW)
                         .putExtra(AiriOverlayService.EXTRA_STATE, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "hideOverlay" -> {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_HIDE)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "updateOverlay" -> {
@@ -48,7 +49,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_UPDATE)
                         .putExtra(AiriOverlayService.EXTRA_STATE, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "configOverlay" -> {
@@ -56,7 +57,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_CONFIG)
                         .putExtra(AiriOverlayService.EXTRA_SIZE, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "switchModel" -> {
@@ -64,7 +65,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_SWITCH_MODEL)
                         .putExtra(AiriOverlayService.EXTRA_MODEL_PATH, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "setDragEnabled" -> {
@@ -72,7 +73,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_DRAG_ENABLED)
                         .putExtra(AiriOverlayService.EXTRA_DRAG_ENABLED, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "musicOverlay" -> {
@@ -80,7 +81,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_MUSIC)
                         .putExtra(AiriOverlayService.EXTRA_PLAYING, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "animOverlay" -> {
@@ -88,7 +89,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_ANIM)
                         .putExtra(AiriOverlayService.EXTRA_ANIM, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "playSound" -> {
@@ -96,13 +97,13 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_PLAY_SOUND)
                         .putExtra(AiriOverlayService.EXTRA_SOUND_PATH, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "stopSound" -> {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_STOP_SOUND)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "setMode" -> {
@@ -110,7 +111,7 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(this, AiriOverlayService::class.java)
                         .setAction(AiriOverlayService.ACTION_SET_MODE)
                         .putExtra(AiriOverlayService.EXTRA_MODE, v)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 "setConfig" -> {
@@ -120,7 +121,7 @@ class MainActivity : FlutterActivity() {
                         .setAction(AiriOverlayService.ACTION_CONFIG)
                         .putExtra(AiriOverlayService.EXTRA_SIZE, size)
                         .putExtra(AiriOverlayService.EXTRA_OPACITY, opacity)
-                    startService(intent)
+                    ContextCompat.startForegroundService(this, intent)
                     result.success(true)
                 }
                 else -> result.notImplemented()
