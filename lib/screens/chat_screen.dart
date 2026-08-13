@@ -10,6 +10,7 @@ import '../services/vision_service.dart';
 import '../services/emotion_service.dart';
 import '../services/memory_service.dart';
 import '../services/overlay_service.dart';
+import '../services/app_launcher_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
@@ -103,6 +104,21 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_loading) return;
     _controller.clear();
 
+    // ── Проверяем команду открытия приложения ПЕРЕД AI ──
+    if (!hasImage && text.isNotEmpty) {
+      final launchResult = await AppLauncherService.tryLaunch(text);
+      if (launchResult != null) {
+        setState(() {
+          _messages.add(ChatMessage(text: text, isUser: true));
+          _messages.add(ChatMessage(text: launchResult, isUser: false));
+          _loading = false;
+        });
+        _scrollDown();
+        await _tts.speak(launchResult, _persona.type);
+        return;
+      }
+    }
+
     // Если TTS говорит — останавливаем перед отправкой
     if (_speaking) {
       await _tts.stop();
@@ -141,31 +157,16 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (!mounted) return;
-
-    // Парсим команды открытия приложений [OPEN:app_name]
-    final parsed = AiService.parseAppCommands(reply);
-    final cleanReply = parsed.$1;
-    final appCommands = parsed.$2;
-
-    // Открываем запрошенные приложения
-    for (final app in appCommands) {
-      final launched = await AiService.tryLaunchApp(app);
-      debugPrint('[AppLaunch] $app -> ${launched ? "OK" : "FAIL"}');
-    }
-
     setState(() {
-      _messages.add(ChatMessage(text: cleanReply, isUser: false));
+      _messages.add(ChatMessage(text: reply, isUser: false));
       _loading = false;
     });
     _scrollDown();
-    // Сохраняем ответ в память
-    _ai.saveToMemory('assistant', cleanReply, persona: _persona.type.name);
-    // Пытаемся извлечь факты из сообщения пользователя
+    _ai.saveToMemory('assistant', reply, persona: _persona.type.name);
     if (text.isNotEmpty) _ai.extractFact(text);
 
-    // Автовоспроизведение ответа
     setState(() => _speaking = true);
-    await _tts.speak(cleanReply, _persona.type);
+    await _tts.speak(reply, _persona.type);
     if (mounted) setState(() => _speaking = false);
   }
 
