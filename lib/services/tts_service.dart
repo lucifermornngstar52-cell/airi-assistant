@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/character_persona.dart';
 
 class TtsService {
@@ -11,9 +15,25 @@ class TtsService {
   Future<void> _init(PersonaType persona) async {
     if (!_initialized) {
       await _tts.setLanguage('ru-RU');
-      await _tts.setSpeechRate(persona == PersonaType.jarvis ? 0.48 : 0.44);
+      await _tts.setSpeechRate(persona == PersonaType.jarvis ? 0.46 : 0.44);
       await _tts.setVolume(1.0);
-      await _tts.setPitch(persona == PersonaType.jarvis ? 0.85 : 1.1);
+      await _tts.setPitch(persona == PersonaType.jarvis ? 0.8 : 1.1);
+
+      // Для Jarvis ищем мужской голос в системе
+      if (persona == PersonaType.jarvis) {
+        try {
+          final voices = await _tts.getVoices;
+          if (voices != null) {
+            for (final v in voices) {
+              final name = v.toString().toLowerCase();
+              if (name.contains('ru') && (name.contains('male') || name.contains('m') || name.contains('rur'))) {
+                await _tts.setVoice({'name': v.toString(), 'locale': 'ru-RU'});
+                break;
+              }
+            }
+          }
+        } catch (_) {}
+      }
 
       _tts.setStartHandler(() => _speaking = true);
       _tts.setCompletionHandler(() => _speaking = false);
@@ -23,8 +43,8 @@ class TtsService {
       _initialized = true;
     } else {
       // При смене персонажа обновляем параметры голоса
-      await _tts.setSpeechRate(persona == PersonaType.jarvis ? 0.48 : 0.44);
-      await _tts.setPitch(persona == PersonaType.jarvis ? 0.85 : 1.1);
+      await _tts.setSpeechRate(persona == PersonaType.jarvis ? 0.46 : 0.44);
+      await _tts.setPitch(persona == PersonaType.jarvis ? 0.8 : 1.1);
     }
   }
 
