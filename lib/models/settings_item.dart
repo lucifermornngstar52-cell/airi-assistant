@@ -20,7 +20,7 @@ const settingsItems = [
   // ── Активные модули ──────────────────────────────────────────
   SettingsItem(
     title: 'Чат с AI',
-    subtitle: 'GPT-4o-mini • распознавание изображений',
+    subtitle: 'GPT-5 • распознавание изображений',
     icon: Icons.chat_bubble_outline,
     route: '/modules/chat',
     badge: 'active',
@@ -48,7 +48,7 @@ const settingsItems = [
   ),
   SettingsItem(
     title: 'Провайдеры',
-    subtitle: 'OpenAI API Key • модель gpt-4o-mini',
+    subtitle: 'OpenAI API Key • модель gpt-5',
     icon: Icons.hub_outlined,
     route: '/providers',
     badge: 'active',
@@ -57,7 +57,7 @@ const settingsItems = [
   // ── В разработке ─────────────────────────────────────────────
   SettingsItem(
     title: 'Зрение (Vision)',
-    subtitle: 'Камера + GPT-4o-mini Vision • анализ фото',
+    subtitle: 'Камера + GPT-5 Vision • анализ фото',
     icon: Icons.visibility_outlined,
     route: '/modules/vision',
     badge: 'active',
