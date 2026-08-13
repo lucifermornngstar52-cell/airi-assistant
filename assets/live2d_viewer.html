@@ -290,6 +290,46 @@ window.externalStopSound = function() { stopSound(); };
 
 // Запуск — без задержки, сразу как DOM готов
 initLive2D();
+
+// ── Фон сцены ──────────────────────────────────────────────────────────
+window.setSceneBackground = function(type, path) {
+  var bgEl = document.getElementById('scene-bg');
+  if (!bgEl) {
+    bgEl = document.createElement(type === 'video' ? 'video' : 'img');
+    bgEl.id = 'scene-bg';
+    bgEl.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:-1;';
+    if (type === 'video') {
+      bgEl.loop = true;
+      bgEl.autoplay = true;
+      bgEl.muted = true;
+      bgEl.playsInline = true;
+    }
+    document.body.insertBefore(bgEl, document.body.firstChild);
+  }
+  if (type === 'none' || !path) {
+    if (bgEl) bgEl.remove();
+    return;
+  }
+  if (type === 'video') {
+    bgEl.src = path;
+    bgEl.play().catch(function(){});
+  } else {
+    bgEl.src = path;
+  }
+};
+
+window.setSceneGradient = function(c1, c2) {
+  var bgEl = document.getElementById('scene-bg');
+  if (bgEl) bgEl.remove();
+  document.body.style.background = 'linear-gradient(135deg, ' + c1 + ', ' + c2 + ')';
+};
+
+window.clearSceneBackground = function() {
+  var bgEl = document.getElementById('scene-bg');
+  if (bgEl) bgEl.remove();
+  document.body.style.background = 'transparent';
+};
+
 </script>
 </body>
 </html>
