@@ -90,7 +90,7 @@ class SettingsScreen extends StatelessWidget {
           icon: Icons.chat_bubble_outline,
           items: [
             ('Провайдер', 'OpenAI API'),
-            ('Модель', 'gpt-4o-mini'),
+            ('Модель', 'gpt-5'),
             ('Max tokens', '1000'),
             ('Temperature', '0.85'),
             ('Персонажи', 'JARVIS / Airi — разные промпты'),
@@ -104,7 +104,7 @@ class SettingsScreen extends StatelessWidget {
           icon: Icons.visibility_outlined,
           items: [
             ('Источник', 'Камера (image_picker)'),
-            ('Движок', 'GPT-4o-mini Vision API'),
+            ('Движок', 'GPT-5 Vision API'),
             ('Размер фото', '1024x1024, качество 85%'),
             ('Формат', 'JPEG / PNG -> base64'),
             ('Макс. токенов', '800'),
@@ -120,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
             ('Камера', 'Фронтальная (CameraDevice.front)'),
             ('Интервал', 'Каждые 20 секунд'),
             ('Первая проверка', 'Через 8 сек после запуска'),
-            ('Движок', 'GPT-4o-mini Vision API'),
+            ('Движок', 'GPT-5 Vision API'),
             ('Max tokens', '50 (короткий ответ)'),
             ('Интеграция', 'Эмоция влияет на тон ответа AI'),
             ('Размер фото', '768x768, качество 75%'),
@@ -162,7 +162,7 @@ class SettingsScreen extends StatelessWidget {
           title: 'Веб-поиск',
           icon: Icons.search,
           items: [
-            ('Движок', 'GPT-4o-mini + web search tool'),
+            ('Движок', 'GPT-5 + web search tool'),
             ('Запросы', 'Через чат — "найди в интернете..."'),
             ('Результаты', 'Краткая выжимка + ссылки'),
             ('Интеграция', 'Автоматически при вопросах о фактах'),
