@@ -153,7 +153,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Автовоспроизведение ответа
     setState(() => _speaking = true);
-    await _tts.speak(reply, _persona.type);
+    await _tts.speak(cleanReply, _persona.type);
     if (mounted) setState(() => _speaking = false);
   }
 
