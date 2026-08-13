@@ -190,7 +190,7 @@ class _ScenesScreenState extends State<ScenesScreen> {
                   ),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     if (selected) const Icon(Icons.check, color: Colors.white, size: 20),
-                    Text(g['name']!, style: TextStyle(
+                    Text(g['name'] as String, style: TextStyle(
                       color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600,
                       shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
                     )),
@@ -267,7 +267,7 @@ class _ScenesScreenState extends State<ScenesScreen> {
           ),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Center(child: Text(g['name']!, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+        child: Center(child: Text(g['name'] as String, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
       );
     }
     return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
