@@ -35,9 +35,9 @@ class VisionService {
       final xfile = await _picker.pickImage(
         source: ImageSource.camera,
         preferredCameraDevice: CameraDevice.front,
-        maxWidth: 768,
-        maxHeight: 768,
-        imageQuality: 75,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 50,
       );
       if (xfile == null) return null;
       return File(xfile.path);
@@ -186,6 +186,9 @@ class VisionService {
         }
         return result;
       }
+      // Логируем тело ответа при ошибке
+      final errBody = utf8.decode(res.bodyBytes);
+      debugPrint('[Vision] emotion API ${res.statusCode}: $errBody');
       return null;
     } catch (e) {
       debugPrint('[Vision] emotion error: $e');
