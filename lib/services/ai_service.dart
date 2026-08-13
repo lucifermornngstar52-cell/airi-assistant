@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import 'memory_service.dart';
 import '../models/character_persona.dart';
 
@@ -17,8 +18,15 @@ class AiService {
       return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
     }
 
-    final basePrompt = persona?.systemPrompt ??
-        'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
+    final basePrompt = (persona?.systemPrompt ??
+        'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.') +
+      '''
+
+ВОЗМОЖНОСТЬ ОТКРЫВАТЬ ПРИЛОЖЕНИЯ:
+Ты можешь открывать приложения на телефоне пользователя. Если пользователь просит открыть какое-то приложение, добавь в конец ответа команду в формате [OPEN:имя_приложения].
+Доступные приложения: telegram, whatsapp, youtube, chrome, настройки, камера, галерея, телефон, сообщения, калькулятор, часы, будильник, календарь, почта, gmail, карты, vk, spotify, tiktok, instagram, facebook, x, discord, netflix.
+Пример: "Открываю Telegram [OPEN:telegram]"
+Не добавляй эту команду если пользователь не просит открыть приложение.''';
 
     // Добавляем память (факты о пользователе) к системному промпту
     final memorySummary = await _memory.getMemorySummary();
@@ -109,6 +117,78 @@ class AiService {
   }
 
   /// Чат с учётом эмоции пользователя (контекст эмоции добавляется в system prompt)
+
+  static const _platform = MethodChannel('com.airi.assistant/overlay');
+
+  /// Список известных приложений для промпта
+  static const knownApps = {
+    'telegram': 'org.telegram.messenger',
+    'телеграм': 'org.telegram.messenger',
+    'whatsapp': 'com.whatsapp',
+    'ватсап': 'com.whatsapp',
+    'youtube': 'com.google.android.youtube',
+    'ютуб': 'com.google.android.youtube',
+    'браузер': 'com.android.chrome',
+    'chrome': 'com.android.chrome',
+    'хром': 'com.android.chrome',
+    'настройки': 'com.android.settings',
+    'камера': 'com.android.camera',
+    'галерея': 'com.android.gallery',
+    'телефон': 'com.android.dialer',
+    'сообщения': 'com.android.messaging',
+    'sms': 'com.android.messaging',
+    'калькулятор': 'com.android.calculator2',
+    'часы': 'com.android.deskclock',
+    'будильник': 'com.android.deskclock',
+    'календарь': 'com.google.android.calendar',
+    'почта': 'com.google.android.gm',
+    'gmail': 'com.google.android.gm',
+    'maps': 'com.google.android.apps.maps',
+    'карты': 'com.google.android.apps.maps',
+    'яндекс карты': 'ru.yandex.yandexmaps',
+    'vk': 'com.vkontakte.android',
+    'вк': 'com.vkontakte.android',
+    'spotify': 'com.spotify.music',
+    'музыка': 'com.spotify.music',
+    'tiktok': 'com.zhiliaoapp.musically',
+    'титок': 'com.zhiliaoapp.musically',
+    'instagram': 'com.instagram.android',
+    'инстаграм': 'com.instagram.android',
+    'facebook': 'com.facebook.katana',
+    'фейсбук': 'com.facebook.katana',
+    'x': 'com.twitter.android',
+    'твиттер': 'com.twitter.android',
+    'discord': 'com.discord',
+    'дискорд': 'com.discord',
+    'netflix': 'com.netflix.mediaclient',
+    'нетфликс': 'com.netflix.mediaclient',
+  };
+
+  /// Попытка открыть приложение по имени
+  static Future<bool> tryLaunchApp(String name) async {
+    final pkg = knownApps[name.toLowerCase().trim()];
+    if (pkg == null) return false;
+    try {
+      final result = await _platform.invokeMethod('launchApp', {'package': pkg});
+      return result == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Парсит ответ AI на наличие команды [OPEN:app_name]
+  /// Возвращает очищенный текст и список приложений для открытия
+  static (String, List<String>) parseAppCommands(String text) {
+    final commands = <String>[];
+    final regex = RegExp(r'\[OPEN:([^\]]+)\]');
+    final matches = regex.allMatches(text);
+    for (final m in matches) {
+      commands.add(m.group(1)!);
+    }
+    final cleaned = text.replaceAll(regex, '').trim();
+    return (cleaned, commands);
+  }
+
   Future<String> chatWithEmotion(
     List<Map<String, String>> history, {
     CharacterPersona? persona,
@@ -124,8 +204,15 @@ class AiService {
       return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
     }
 
-    final basePrompt = persona?.systemPrompt ??
-        'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
+    final basePrompt = (persona?.systemPrompt ??
+        'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.') +
+      '''
+
+ВОЗМОЖНОСТЬ ОТКРЫВАТЬ ПРИЛОЖЕНИЯ:
+Ты можешь открывать приложения на телефоне пользователя. Если пользователь просит открыть какое-то приложение, добавь в конец ответа команду в формате [OPEN:имя_приложения].
+Доступные приложения: telegram, whatsapp, youtube, chrome, настройки, камера, галерея, телефон, сообщения, калькулятор, часы, будильник, календарь, почта, gmail, карты, vk, spotify, tiktok, instagram, facebook, x, discord, netflix.
+Пример: "Открываю Telegram [OPEN:telegram]"
+Не добавляй эту команду если пользователь не просит открыть приложение.''';
     final memorySummary = await _memory.getMemorySummary();
     final systemPrompt = basePrompt + memorySummary + '\n\nСейчас пользователь выглядит так: "$userEmotion". Учитывай это в ответе — подстрой тон, эмпатию и настроение. Не упоминай прямо, что видишь эмоцию, если не уместно.';
 
