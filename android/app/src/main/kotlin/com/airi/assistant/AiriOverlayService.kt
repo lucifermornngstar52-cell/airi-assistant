@@ -80,7 +80,7 @@ class AiriOverlayService : Service() {
     private fun getHtmlPath(): String =
         if (currentMode == "3d") "file:///android_asset/flutter_assets/assets/3d_viewer.html"
         else "file:///android_asset/flutter_assets/assets/live2d_viewer.html"
-    private var sizeDp       = 200f
+    private var sizeDp       = 120f
     private var opacity      = 1f
     private var side         = "left"
 
@@ -117,7 +117,7 @@ class AiriOverlayService : Service() {
         val density = resources.displayMetrics.density
 
         val wPx = (sizeDp * density).roundToInt()
-        val hPx = (sizeDp * 1.6f * density).roundToInt()
+        val hPx = (sizeDp * 1.8f * density).roundToInt()
 
         val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -267,7 +267,7 @@ class AiriOverlayService : Service() {
                     if (newSize > 0f) {
                         sizeDp = newSize
                         p.width  = (sizeDp * density).roundToInt()
-                        p.height = (sizeDp * 1.6f * density).roundToInt()
+                        p.height = (sizeDp * 1.8f * density).roundToInt()
                         changed = true
                     }
                     if (newOpacity >= 0f) {
