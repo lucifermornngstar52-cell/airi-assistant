@@ -88,7 +88,7 @@ const settingsItems = [
     subtitle: 'Виртуальная среда для персонажей',
     icon: Icons.landscape_outlined,
     route: '/scenes',
-    badge: 'soon',
+    badge: 'active',
   ),
   // ── Расширения ────────────────────────────────────────────────
   SettingsItem(
