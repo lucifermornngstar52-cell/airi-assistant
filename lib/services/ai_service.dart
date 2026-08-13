@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/services.dart';
 import 'memory_service.dart';
 import '../models/character_persona.dart';
 
@@ -18,7 +17,7 @@ class AiService {
       return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
     }
 
-    final basePrompt = (persona?.systemPrompt ??
+    final basePrompt = persona?.systemPrompt ??
         'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
 
     // Добавляем память (факты о пользователе) к системному промпту
@@ -126,7 +125,7 @@ class AiService {
       return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
     }
 
-    final basePrompt = (persona?.systemPrompt ??
+    final basePrompt = persona?.systemPrompt ??
         'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
     final memorySummary = await _memory.getMemorySummary();
     final systemPrompt = basePrompt + memorySummary + '\n\nСейчас пользователь выглядит так: "$userEmotion". Учитывай это в ответе — подстрой тон, эмпатию и настроение. Не упоминай прямо, что видишь эмоцию, если не уместно.';
