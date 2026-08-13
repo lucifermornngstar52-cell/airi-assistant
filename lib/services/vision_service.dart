@@ -99,7 +99,7 @@ class VisionService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o',
+          'model': 'gpt-4o-mini',
           'messages': [
             {
               'role': 'user',
@@ -151,7 +151,7 @@ class VisionService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o',
+          'model': 'gpt-4o-mini',
           'messages': [
             {
               'role': 'system',
