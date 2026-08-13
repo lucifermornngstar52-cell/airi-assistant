@@ -12,7 +12,7 @@ class OverlayService {
   // _modelChannel merged into _overlayChannel (live2d_overlay not registered)
 
   // Настройки размера
-  double _sizeDp   = 170.0;
+  double _sizeDp   = 120.0;
   double _opacity  = 1.0;
   bool   _mirror   = false;
   String _side     = 'left'; // left / right
@@ -26,7 +26,7 @@ class OverlayService {
   // ─── Инициализация ──────────────────────────────────────────────────
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _sizeDp  = prefs.getDouble('overlay_size')    ?? 170.0;
+    _sizeDp  = prefs.getDouble('overlay_size')    ?? 120.0;
     _opacity = prefs.getDouble('overlay_opacity') ?? 1.0;
     _mirror  = prefs.getBool('overlay_mirror')    ?? false;
     _side    = prefs.getString('overlay_side')    ?? 'left';
@@ -114,7 +114,7 @@ class OverlayService {
 
   // ─── Конфиг: размер / прозрачность / сторона ────────────────────────
   Future<void> setSize(double dp) async {
-    _sizeDp = dp.clamp(80.0, 350.0);
+    _sizeDp = dp.clamp(60.0, 350.0);
     await _savePrefs();
     await _sendConfig();
   }
