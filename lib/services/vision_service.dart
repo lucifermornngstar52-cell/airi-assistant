@@ -35,9 +35,9 @@ class VisionService {
       final xfile = await _picker.pickImage(
         source: ImageSource.camera,
         preferredCameraDevice: CameraDevice.front,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 50,
+        maxWidth: 256,
+        maxHeight: 256,
+        imageQuality: 30,
       );
       if (xfile == null) return null;
       return File(xfile.path);
@@ -173,7 +173,7 @@ class VisionService {
               ],
             },
           ],
-          'max_tokens': 50,
+          'max_completion_tokens': 50,
           'temperature': 0.3,
         }),
       ).timeout(const Duration(seconds: 15));
