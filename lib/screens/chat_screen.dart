@@ -41,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _emotion = EmotionService();
   String? _userEmotion;
   bool _emotionWatching = false;
+  String? _emotionError;
   File? _pendingImage;
   final _overlay = OverlayService();
   bool _overlayActive = false;
@@ -300,7 +301,14 @@ class _ChatScreenState extends State<ChatScreen> {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => PersonaScreen(
         currentType: _persona.type,
-        onSelect: (p) => setState(() => _persona = p),
+        onSelect: (p) {
+          setState(() => _persona = p);
+          // Меняем модель в оверлее: Airi → Hiyori, Jarvis → Natori
+          final modelPath = p.type == PersonaType.cute
+              ? 'models/Hiyori/Hiyori.model3.json'
+              : 'models/Natori/Natori.model3.json';
+          OverlayService().switchModel(modelPath);
+        },
       ),
     ));
   }
