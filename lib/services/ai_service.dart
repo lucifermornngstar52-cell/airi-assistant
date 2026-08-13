@@ -37,7 +37,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o-mini',
+          'model': 'gpt-5',
           'messages': messages,
           'max_tokens': 1000,
           'temperature': 0.85,
@@ -55,7 +55,7 @@ class AiService {
     }
   }
 
-  /// Чат с поддержкой изображения (GPT-4o-mini Vision)
+  /// Чат с поддержкой изображения (GPT-5 Vision)
   Future<String> visionChat(
     String prompt,
     File image, {
@@ -81,7 +81,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o-mini',
+          'model': 'gpt-5',
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {
@@ -142,7 +142,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o-mini',
+          'model': 'gpt-5',
           'messages': messages,
           'max_tokens': 1000,
           'temperature': 0.85,
