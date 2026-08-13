@@ -86,7 +86,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadPersona() async {
     final type = await _ai.loadPersona();
     if (!mounted) return;
-    setState {
+    setState(() {
       _persona = allPersonas.firstWhere((p) => p.type == type);
     });
     // Устанавливаем модель оверлея: Airi → Hiyori, Jarvis → Natori
