@@ -167,10 +167,10 @@ function fitModel() {
   try {
     var w = app.screen.width, h = app.screen.height;
     model.x = w * 0.5;
-    model.y = h * 0.6;
+    model.y = h * 0.5;
     var origW = (model.internalModel && model.internalModel.originalWidth)  || 1000;
     var origH = (model.internalModel && model.internalModel.originalHeight) || 1000;
-    var scale = Math.min(w / origW, h / origH) * 1.35;
+    var scale = Math.min(w / origW, h / origH) * 0.92;
     model.scale.set(scale);
   } catch(e) {}
 }
