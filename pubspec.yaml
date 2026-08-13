@@ -39,7 +39,3 @@ flutter:
     - assets/models/Natori/exp/
     - assets/models/Natori/Natori.2048/
     - assets/live2d/
-  assets:
-    - assets/live2d_viewer.html
-    - assets/live2d/
-    - assets/models/
