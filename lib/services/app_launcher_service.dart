@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -53,10 +54,12 @@ class AppLauncherService {
 
   /// Запускает приложение по package name через нативный launchApp.
   static Future<bool> launchPackage(String packageName) async {
+    debugPrint('[AppLauncher] launchPackage: $packageName');
     try {
       final result = await _channel.invokeMethod<bool>(
         'launchApp', {'package': packageName},
       );
+      debugPrint('[AppLauncher] launchPackage result: $result');
       return result == true;
     } catch (e) {
       return false;
@@ -83,6 +86,7 @@ class AppLauncherService {
   /// Возвращает строку-результат или null если не смогла запустить.
   static Future<String?> tryLaunch(String phrase) async {
     final normalized = _normalize(phrase);
+    debugPrint('[AppLauncher] tryLaunch: "$phrase" → normalized: "$normalized"');
 
     // Проверяем есть ли намерение открыть приложение
     if (!_hasOpenIntent(normalized)) return null;
@@ -222,6 +226,7 @@ class AppLauncherService {
   /// Хардкод-таблица для надёжного запуска.
   static String? _hardcodedMatch(String clean) {
     final q = _normalize(clean).replaceAll(' ', '');
+    debugPrint('[AppLauncher] hardcodedMatch: "$clean" → "$q"');
     const map = {
       // ── Мессенджеры ──
       'телеграм': 'org.telegram.messenger',
