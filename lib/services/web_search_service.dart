@@ -1,98 +1,174 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// WebSearchService — бесплатный веб-поиск для AI-контекста
-/// Использует DuckDuckGo Instant Answer API (без ключа)
-/// + Brave Search API (если есть ключ, 2000 бесплатных запросов/мес)
+/// WebSearchService — поиск в интернете.
+/// 
+/// Два режима:
+/// 1. "найди X" / "погугли X" — открывает браузер с Google-поиском
+/// 2. "найди информацию о X" / "что такое X" — ищет через DuckDuckGo
+///    и возвращает результат в чат для AI-обработки
 class WebSearchService {
-  static String _braveKey = '';
-  static void setBraveKey(String k) => _braveKey = k;
+  static const _channel = MethodChannel('com.airi.assistant/launcher');
 
-  /// Поиск — возвращает текст для вставки в контекст AI
-  static Future<String> search(String query) async {
-    // Пробуем Brave если есть ключ (лучше результаты)
-    if (_braveKey.isNotEmpty) {
-      try {
-        final result = await _braveSearch(query);
-        if (result.isNotEmpty) return result;
-      } catch (_) {}
+  /// Триггеры для открытия браузера
+  static const List<String> browserTriggers = [
+    'найди', 'погугли', 'поищи', 'загугли', 'искать',
+    'поиск по запросу', 'google it', 'search for',
+  ];
+
+  /// Триггеры для умного поиска (в чате)
+  static const List<String> smartTriggers = [
+    'найди информацию', 'найди инфу', 'что такое', 'кто такой',
+    'что значит', 'расскажи о', 'что такое поисковая',
+    'search info', 'look up',
+  ];
+
+  /// Триггеры для открытия сайта
+  static const List<String> siteTriggers = [
+    'открой сайт', 'перейди на сайт', 'зайди на сайт',
+    'открой ссылку', 'перейди по ссылке',
+  ];
+
+  /// Проверяет есть ли поисковый запрос
+  static bool isSearchCommand(String text) {
+    final t = text.toLowerCase().trim();
+    for (final trigger in browserTriggers) {
+      if (t.startsWith(trigger + ' ') || t.contains(' ' + trigger + ' ')) return true;
     }
-
-    // DuckDuckGo — бесплатно, всегда
-    try {
-      final result = await _duckDuckGoSearch(query);
-      if (result.isNotEmpty) return result;
-    } catch (_) {}
-
-    return '';
+    for (final trigger in smartTriggers) {
+      if (t.startsWith(trigger + ' ') || t.contains(' ' + trigger + ' ')) return true;
+    }
+    for (final trigger in siteTriggers) {
+      if (t.startsWith(trigger + ' ') || t.contains(' ' + trigger + ' ')) return true;
+    }
+    return false;
   }
 
-  /// DuckDuckGo Instant Answer API — полностью бесплатно
-  static Future<String> _duckDuckGoSearch(String query) async {
-    final encoded = Uri.encodeComponent(query);
-    final response = await http.get(
-      Uri.parse(
-          'https://api.duckduckgo.com/?q=$encoded&format=json&no_redirect=1&no_html=1&skip_disambig=1'),
-      headers: {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 5));
+  /// Главная точка входа. Возвращает результат или null если это не поисковый запрос.
+  static Future<String?> trySearch(String text) async {
+    final t = text.toLowerCase().trim();
 
-    if (response.statusCode != 200) return '';
-
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    final parts = <String>[];
-
-    // Основной ответ
-    final abstract_ = data['Abstract'] as String? ?? '';
-    if (abstract_.isNotEmpty) parts.add(abstract_);
-
-    // Связанные темы
-    final related = data['RelatedTopics'] as List? ?? [];
-    for (final r in related.take(3)) {
-      if (r is Map && r['Text'] != null) {
-        final text = r['Text'] as String;
-        if (text.isNotEmpty) parts.add(text);
+    // ── Открытие сайта ──
+    for (final trigger in siteTriggers) {
+      if (t.startsWith(trigger + ' ')) {
+        final site = text.substring(t.indexOf(trigger) + trigger.length).trim();
+        if (site.isNotEmpty) return await _openWebsite(site);
       }
     }
 
-    // Определение
-    final definition = data['Definition'] as String? ?? '';
-    if (definition.isNotEmpty && !parts.contains(definition)) {
-      parts.add(definition);
+    // ── Умный поиск (DuckDuckGo API) ──
+    for (final trigger in smartTriggers) {
+      if (t.startsWith(trigger + ' ')) {
+        final query = text.substring(t.indexOf(trigger) + trigger.length).trim();
+        if (query.isNotEmpty) return await _smartSearch(query);
+      }
     }
 
-    // Ответ (например на вопрос "сколько...")
-    final answer = data['Answer'] as String? ?? '';
-    if (answer.isNotEmpty) parts.insert(0, answer);
+    // ── Поиск в браузере ──
+    for (final trigger in browserTriggers) {
+      if (t.startsWith(trigger + ' ')) {
+        final query = text.substring(t.indexOf(trigger) + trigger.length).trim();
+        if (query.isNotEmpty) return await _searchInBrowser(query);
+      }
+    }
 
-    if (parts.isEmpty) return '';
-    return '[Поиск: "$query"]\n${parts.join('\n')}';
+    return null;
   }
 
-  /// Brave Search API — 2000 запросов/месяц бесплатно
-  static Future<String> _braveSearch(String query) async {
-    final encoded = Uri.encodeComponent(query);
-    final response = await http.get(
-      Uri.parse('https://api.search.brave.com/res/v1/web/search?q=$encoded&count=3&text_decorations=false'),
-      headers: {
-        'Accept': 'application/json',
-        'X-Subscription-Token': _braveKey,
-      },
-    ).timeout(const Duration(seconds: 5));
-
-    if (response.statusCode != 200) return '';
-
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    final results = data['web']?['results'] as List? ?? [];
-    if (results.isEmpty) return '';
-
-    final parts = <String>[];
-    for (final r in results.take(3)) {
-      final title = r['title'] as String? ?? '';
-      final desc = r['description'] as String? ?? '';
-      if (desc.isNotEmpty) parts.add('• $title: $desc');
+  /// Открывает Google-поиск в браузере
+  static Future<String> _searchInBrowser(String query) async {
+    try {
+      final encoded = Uri.encodeComponent(query);
+      final url = 'https://www.google.com/search?q=$encoded';
+      await _channel.invokeMethod('launchUrl', {'url': url});
+      return 'Ищу "$query" в браузере 🔍';
+    } catch (e) {
+      // Фолбэк — пробуем через findAndLaunch открыть браузер
+      try {
+        await _channel.invokeMethod('findAndLaunch', {'name': 'chrome'});
+        return 'Открываю браузер для поиска 🔍';
+      } catch (_) {
+        return 'Не удалось открыть браузер 😕';
+      }
     }
+  }
 
-    if (parts.isEmpty) return '';
-    return '[Веб-поиск: "$query"]\n${parts.join('\n')}';
+  /// Умный поиск через DuckDuckGo — возвращает результат текстом
+  static Future<String> _smartSearch(String query) async {
+    try {
+      // DuckDuckGo Instant Answer API
+      final encoded = Uri.encodeComponent(query);
+      final url = Uri.parse('https://api.duckduckgo.com/?q=$encoded&format=json&no_html=1&skip_disambig=1&ru=1');
+
+      final res = await http.get(url).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final abstractText = data['AbstractText'] as String? ?? '';
+        final abstractSource = data['AbstractSource'] as String? ?? '';
+        final abstractUrl = data['AbstractURL'] as String? ?? '';
+
+        // Собираем результаты
+        final results = <String>[];
+
+        if (abstractText.isNotEmpty) {
+          results.add(abstractText);
+          if (abstractSource.isNotEmpty) {
+            results.add('\n\nИсточник: $abstractSource');
+          }
+        }
+
+        // Related topics (топ 3)
+        final related = data['RelatedTopics'] as List? ?? [];
+        for (var i = 0; i < related.length && i < 3; i++) {
+          final topic = related[i] as Map<String, dynamic>?;
+          if (topic != null) {
+            final text = topic['Text'] as String? ?? '';
+            if (text.isNotEmpty && text.length > 20) {
+              results.add('\n\n• $text');
+            }
+          }
+        }
+
+        if (results.isNotEmpty) {
+          // Открываем также браузер для полноты
+          await _searchInBrowser(query);
+          return 'Вот что нашла по запросу "$query":\n\n${results.join()}\n\nПодробности в браузере 🔍';
+        }
+
+        // Если DuckDuckGo ничего не дал — открываем браузер
+        await _searchInBrowser(query);
+        return 'Открываю браузер для поиска "$query" 🔍';
+      }
+
+      await _searchInBrowser(query);
+      return 'Ищу "$query" в браузере 🔍';
+    } catch (e) {
+      // Фолбэк — открываем браузер
+      try {
+        await _searchInBrowser(query);
+        return 'Ищу "$query" в браузере 🔍';
+      } catch (_) {
+        return 'Не удалось найти информацию 😕';
+      }
+    }
+  }
+
+  /// Открывает сайт
+  static Future<String> _openWebsite(String site) async {
+    try {
+      var url = site.trim();
+      if (!url.startsWith('http')) url = 'https://$url';
+      await _channel.invokeMethod('launchUrl', {'url': url});
+      return 'Открываю $site 🌐';
+    } catch (_) {
+      try {
+        await _channel.invokeMethod('findAndLaunch', {'name': 'chrome'});
+        return 'Открываю браузер 🌐';
+      } catch (_) {
+        return 'Не удалось открыть сайт 😕';
+      }
+    }
   }
 }
