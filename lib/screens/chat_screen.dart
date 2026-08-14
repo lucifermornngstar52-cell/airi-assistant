@@ -526,7 +526,7 @@ class _ChatScreenState extends State<ChatScreen> {
           listening: _listening,
           persona: _persona,
           onSend: _send,
-          onVoice: Platform.isWindows ? null : () { _toggleVoice(); },
+          onVoice: Platform.isWindows ? null : _toggleVoice,
         ),
       ]),
     );
@@ -683,7 +683,7 @@ class _InputBar extends StatelessWidget {
   final bool listening;
   final CharacterPersona persona;
   final VoidCallback onSend;
-  final VoidCallback onVoice;
+  final VoidCallback? onVoice;
 
   const _InputBar({
     required this.controller,
@@ -691,7 +691,7 @@ class _InputBar extends StatelessWidget {
     required this.listening,
     required this.persona,
     required this.onSend,
-    required this.onVoice,
+    this.onVoice,
   });
 
   @override
@@ -703,7 +703,7 @@ class _InputBar extends StatelessWidget {
         border: Border(top: BorderSide(color: AppTheme.cardBorder, width: 0.5)),
       ),
       child: Row(children: [
-        _VoiceButton(listening: listening, onTap: onVoice),
+        if (onVoice != null) _VoiceButton(listening: listening, onTap: onVoice!),
         const SizedBox(width: 10),
         Expanded(
           child: Container(
