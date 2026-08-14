@@ -12,6 +12,7 @@ import '../services/memory_service.dart';
 import '../services/overlay_service.dart';
 import '../services/app_launcher_service.dart';
 import '../services/web_search_service.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
@@ -525,7 +526,7 @@ class _ChatScreenState extends State<ChatScreen> {
           listening: _listening,
           persona: _persona,
           onSend: _send,
-          onVoice: Platform.isWindows ? null : _toggleVoice,
+          onVoice: Platform.isWindows ? null : () { _toggleVoice(); },
         ),
       ]),
     );
