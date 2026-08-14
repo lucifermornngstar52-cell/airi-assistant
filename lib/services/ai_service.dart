@@ -130,7 +130,22 @@ class AiService {
         'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.') +
         '\n\nОТКРЫТИЕ ПРИЛОЖЕНИЙ: Если пользователь просит открыть приложение, ответь "Открываю [название]" и приложение запустится автоматически. Доступные приложения: телеграм, ватсап, ютуб, инстаграм, вк, дискорд, spotify, нетфликс, tiktok, браузер, почта, камера, настройки, калькулятор, часы, карты, телефон, сообщения.';
     final memorySummary = await _memory.getMemorySummary();
-    final systemPrompt = basePrompt + memorySummary + '\n\nСейчас пользователь выглядит так: "$userEmotion". Учитывай это в ответе — подстрой тон, эмпатию и настроение. Не упоминай прямо, что видишь эмоцию, если не уместно.';
+    // Адаптируем промпт в зависимости от эмоции
+    String emotionPrompt = '';
+    if (userEmotion.toLowerCase().contains('радост') || userEmotion.toLowerCase().contains('весел') || userEmotion.toLowerCase().contains('улыб') || userEmotion.toLowerCase().contains('счастл') || userEmotion.toLowerCase().contains('happy') || userEmotion.toLowerCase().contains('joy')) {
+      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь сейчас очень радостный и весёлый! Подстрой свой тон — будь тоже энергичным и позитивным. Спроси почему у него такое хорошее настроение, расскажи что-то весёлое или интересное. Не упоминай что видишь его эмоцию — просто будь частью его радости.';
+    } else if (userEmotion.toLowerCase().contains('груст') || userEmotion.toLowerCase().contains('печал') || userEmotion.toLowerCase().contains('sad') || userEmotion.toLowerCase().contains('уныл') || userEmotion.toLowerCase().contains('депрес')) {
+      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь выглядит грустным. Будь заботливым и тёплым. Мягко спроси что случилось, из-за чего у него плохое настроение. Не будь навязчивым — просто покажи что ты рядом и готов поддержать. Не упоминай что видишь его эмоцию напрямую.';
+    } else if (userEmotion.toLowerCase().contains('устал') || userEmotion.toLowerCase().contains('сон') || userEmotion.toLowerCase().contains('tired') || userEmotion.toLowerCase().contains('sleepy')) {
+      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь выглядит уставшим. Будь спокойным и мягким. Не тряси его энергией. Предложи отдохнуть, спроси как прошёл день. Не упоминай что видишь его состояние.';
+    } else if (userEmotion.toLowerCase().contains('зл') || userEmotion.toLowerCase().contains('раздраж') || userEmotion.toLowerCase().contains('angry') || userEmotion.toLowerCase().contains('frustrat')) {
+      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь раздражён или злится. Будь спокойным и понимающим. Не раздражай в ответ. Мягко спроси что произошло. Не говори «успокойся» — просто будь рядом.';
+    } else if (userEmotion.toLowerCase().contains('удивл') || userEmotion.toLowerCase().contains('surpris')) {
+      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь удивлён. Поделись этим настроением — будь любопытным, спроси что его так удивило.';
+    } else {
+      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Учитывай это в ответе — подстрой тон и настроение. Не упоминай прямо, что видишь эмоцию.';
+    }
+    final systemPrompt = basePrompt + memorySummary + emotionPrompt;
 
     final messages = [
       {'role': 'system', 'content': systemPrompt},
