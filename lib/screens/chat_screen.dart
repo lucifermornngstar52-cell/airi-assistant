@@ -11,6 +11,7 @@ import '../services/emotion_service.dart';
 import '../services/memory_service.dart';
 import '../services/overlay_service.dart';
 import '../services/app_launcher_service.dart';
+import '../services/web_search_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ChatMessage {
@@ -115,6 +116,21 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _scrollDown();
         await _tts.speak(launchResult, _persona.type);
+        return;
+      }
+    }
+
+    // ── Проверяем поисковый запрос ПЕРЕД AI ──
+    if (!hasImage && text.isNotEmpty) {
+      final searchResult = await WebSearchService.trySearch(text);
+      if (searchResult != null) {
+        setState(() {
+          _messages.add(ChatMessage(text: text, isUser: true));
+          _messages.add(ChatMessage(text: searchResult, isUser: false));
+          _loading = false;
+        });
+        _scrollDown();
+        await _tts.speak(searchResult, _persona.type);
         return;
       }
     }
