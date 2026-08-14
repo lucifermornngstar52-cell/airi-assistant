@@ -157,6 +157,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (!mounted) return;
+
+    // Парсим ответ AI — может он предложил открыть приложение
+    final aiLaunchResult = await AppLauncherService.tryLaunchFromAIResponse(reply);
+
     setState(() {
       _messages.add(ChatMessage(text: reply, isUser: false));
       _loading = false;
@@ -164,6 +168,12 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollDown();
     _ai.saveToMemory('assistant', reply, persona: _persona.type.name);
     if (text.isNotEmpty) _ai.extractFact(text);
+
+    // Если AI предложил открыть приложение — открываем
+    if (aiLaunchResult != null) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      // TTS уже скажет "Открываю"
+    }
 
     setState(() => _speaking = true);
     await _tts.speak(reply, _persona.type);
