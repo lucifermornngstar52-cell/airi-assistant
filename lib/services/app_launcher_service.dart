@@ -458,6 +458,51 @@ class AppLauncherService {
     return matrix[s1.length][s2.length];
   }
 
+  /// Пытается найти название приложения в ответе AI и запустить его.
+  /// Ищет фразы типа "открываю телеграм", "запускаю ютуб", "открой telegram" и т.д.
+  static Future<String?> tryLaunchFromAIResponse(String aiReply) async {
+    final normalized = _normalize(aiReply);
+    
+    // Ищем паттерны: "открываю X", "запускаю X", "открываю приложение X"
+    final patterns = [
+      RegExp(r'открываю\s+(.+?)(?:[.,!\n]|$)'),
+      RegExp(r'запускаю\s+(.+?)(?:[.,!\n]|$)'),
+      RegExp(r'открываю\s+приложение\s+(.+?)(?:[.,!\n]|$)'),
+      RegExp(r'запускаю\s+приложение\s+(.+?)(?:[.,!\n]|$)'),
+      RegExp(r'\[open:([^\]]+)\]'),
+    ];
+    
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(normalized);
+      if (match != null) {
+        final appName = match.group(1)?.trim();
+        if (appName != null && appName.isNotEmpty) {
+          // Убираем лишние слова
+          final clean = appName
+              .replaceAll(RegExp(r'^(приложение|app)\s+'), '')
+              .replaceAll(RegExp(r'\s+(приложение|app)$'), '')
+              .trim();
+          if (clean.isNotEmpty) {
+            // Пробуем хардкод
+            final pkg = _hardcodedMatch(clean);
+            if (pkg != null) {
+              if (await launchPackage(pkg)) return 'Открываю 📱';
+            }
+            // Пробуем smart matching
+            final smartResult = await smartLaunch(clean);
+            if (smartResult != null) return smartResult;
+            // Пробуем findAndLaunch через натив
+            try {
+              final result = await _channel.invokeMethod<bool>('findAndLaunch', {'name': clean});
+              if (result == true) return 'Открываю 📱';
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   // ── Aliases for commands_screen.dart ─────────────────────────────────
   static Future<Map<String, String>> getAllCommands() async => await getCustomCommands();
   static Future<void> addCommand(String phrase, String packageName) async => await saveCustomCommand(phrase, packageName);
