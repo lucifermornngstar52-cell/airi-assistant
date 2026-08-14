@@ -1,5 +1,0 @@
-#include "resource.h"
-
-IDI_APP_ICON ICON "app_icon.ico"
-
-#include "runner.exe.manifest"
