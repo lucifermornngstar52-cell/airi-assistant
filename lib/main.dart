@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Conditional import — FFI только на desktop
-import 'utils/desktop_db.dart' if (dart.library.html) 'utils/mobile_db.dart' as db;
-
+import 'utils/desktop_db.dart' as db;
 import 'theme/app_theme.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
@@ -12,10 +10,8 @@ import 'screens/providers_screen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // На Windows/Linux — используем FFI для SQLite
-  if (Platform.isWindows || Platform.isLinux) {
-    db.initDesktopDb();
-  }
+  // На Windows/Linux — FFI init (no-op на mobile)
+  db.initDesktopDb();
 
   // Только на мобильных — ориентация и статус-бар
   if (Platform.isAndroid || Platform.isIOS) {
