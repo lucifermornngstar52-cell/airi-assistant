@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// WebSearchService — поиск в интернете.
@@ -82,6 +84,12 @@ class WebSearchService {
     try {
       final encoded = Uri.encodeComponent(query);
       final url = 'https://www.google.com/search?q=$encoded';
+      // На Windows — через url_launcher
+      if (Platform.isWindows) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        return 'Ищу "$query" в браузере 🔍';
+      }
+      // На Android — через MethodChannel
       await _channel.invokeMethod('launchUrl', {'url': url});
       return 'Ищу "$query" в браузере 🔍';
     } catch (e) {
@@ -160,6 +168,10 @@ class WebSearchService {
     try {
       var url = site.trim();
       if (!url.startsWith('http')) url = 'https://$url';
+      if (Platform.isWindows) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        return 'Открываю $site 🌐';
+      }
       await _channel.invokeMethod('launchUrl', {'url': url});
       return 'Открываю $site 🌐';
     } catch (_) {
