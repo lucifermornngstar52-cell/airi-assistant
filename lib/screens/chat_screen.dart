@@ -352,9 +352,64 @@ class _ChatScreenState extends State<ChatScreen> {
               ? 'models/Hiyori/Hiyori.model3.json'
               : 'models/Natori/Natori.model3.json';
           OverlayService().switchModel(modelPath);
+          // На Windows — обновляем модельку в чате
+          if (Platform.isWindows) {
+            _currentModelPath = '';
+            _loadLive2DModel();
+          }
         },
       ),
     ));
+  }
+
+  // Live2D WebView для Windows (встроенная моделька в чате)
+  InAppWebViewController? _live2dController;
+  bool _live2dReady = false;
+  String _currentModelPath = '';
+
+  Widget _buildLive2DModel() {
+    if (!Platform.isWindows) return const SizedBox.shrink();
+    return SizedBox(
+      height: 200,
+      child: Stack(
+        children: [
+          InAppWebView(
+            initialUrlRequest: URLRequest(
+              url: WebUri('file:///android_asset/flutter_assets/assets/live2d_viewer.html'),
+            ),
+            initialSettings: InAppWebViewSettings(
+              transparentBackground: true,
+              allowFileAccessFromFileURLs: true,
+              allowUniversalAccessFromFileURLs: true,
+            ),
+            onWebViewCreated: (controller) {
+              _live2dController = controller;
+            },
+            onLoadStop: (controller, url) async {
+              _live2dReady = true;
+              _loadLive2DModel();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _loadLive2DModel() async {
+    if (!_live2dReady || _live2dController == null) return;
+    final modelPath = _persona.type == PersonaType.cute
+        ? 'models/Hiyori/Hiyori.model3.json'
+        : 'models/Natori/Natori.model3.json';
+    if (modelPath == _currentModelPath) return;
+    _currentModelPath = modelPath;
+
+    // Загружаем модель через JS
+    await Future.delayed(const Duration(milliseconds: 1200));
+    await _live2dController!.evaluateJavascript(source: '''
+      if (window.loadModel) {
+        window.loadModel("assets/$modelPath");
+      }
+    ''');
   }
 
   @override
@@ -422,7 +477,8 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: _toggleEmotionWatch,
             tooltip: _emotionWatching ? 'Наблюдение активно' : 'Включить наблюдение',
           ),
-          // Кнопка Live2D оверлея
+          // Кнопка Live2D оверлея — только на Android
+          if (!Platform.isWindows)
           IconButton(
             icon: Icon(
               _overlayActive ? Icons.layers : Icons.layers_outlined,
@@ -448,6 +504,8 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       body: Column(children: [
+        // Live2D моделька только на Windows
+        if (Platform.isWindows) _buildLive2DModel(),
         Expanded(
           child: _messages.isEmpty
               ? _EmptyState(persona: _persona, onTap: _openPersona)
@@ -467,7 +525,7 @@ class _ChatScreenState extends State<ChatScreen> {
           listening: _listening,
           persona: _persona,
           onSend: _send,
-          onVoice: _toggleVoice,
+          onVoice: Platform.isWindows ? null : _toggleVoice,
         ),
       ]),
     );
