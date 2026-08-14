@@ -32,7 +32,7 @@ class EmotionService {
     debugPrint('[Emotion] скрытное наблюдение запущено');
 
     await _initCamera();
-    _timer = Timer(const Duration(seconds: 3), _check);
+    _timer = Timer(const Duration(seconds: 2), _check);
   }
 
   Future<void> _initCamera() async {
@@ -118,6 +118,6 @@ class EmotionService {
 
   void _scheduleNext() {
     if (!_active) return;
-    _timer = Timer(const Duration(seconds: 10), _check);
+    _timer = Timer(const Duration(seconds: 5), _check);
   }
 }
