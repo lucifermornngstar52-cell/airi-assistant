@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import 'dart:convert';
@@ -30,6 +31,8 @@ class AppLauncherService {
 
   /// Получает список всех установленных запускаемых приложений.
   static Future<List<Map<String, String>>> getInstalledApps() async {
+    // На Windows нет аналога getInstalledApps
+    if (Platform.isWindows) return [];
     if (_cacheTime != null &&
         DateTime.now().difference(_cacheTime!) < _cacheTimeout &&
         _appsCache.isNotEmpty) {
@@ -55,6 +58,29 @@ class AppLauncherService {
   /// Запускает приложение по package name через нативный launchApp.
   static Future<bool> launchPackage(String packageName) async {
     debugPrint('[AppLauncher] launchPackage: $packageName');
+    
+    // На Windows — запускаем через Process
+    if (Platform.isWindows) {
+      try {
+        // Пробуем через нативный канал (ShellExecute)
+        final result = await _channel.invokeMethod<bool>(
+          'launchApp', {'package': packageName},
+        );
+        if (result == true) return true;
+      } catch (e) {
+        debugPrint('[AppLauncher] Windows channel failed: $e');
+      }
+      // Фолбэк — через Process.run
+      try {
+        final r = await Process.run('cmd', ['/c', 'start', '', packageName]);
+        return r.exitCode == 0;
+      } catch (e) {
+        debugPrint('[AppLauncher] Process.run failed: $e');
+        return false;
+      }
+    }
+    
+    // На Android — через MethodChannel
     try {
       final result = await _channel.invokeMethod<bool>(
         'launchApp', {'package': packageName},
@@ -227,6 +253,71 @@ class AppLauncherService {
   static String? _hardcodedMatch(String clean) {
     final q = _normalize(clean).replaceAll(' ', '');
     debugPrint('[AppLauncher] hardcodedMatch: "$clean" → "$q"');
+    // На Windows — другие package names (пути к exe)
+    if (Platform.isWindows) {
+      const winMap = {
+        'телеграм': 'Telegram',
+        'telegram': 'Telegram',
+        'тг': 'Telegram',
+        'tg': 'Telegram',
+        'ватсап': 'WhatsApp',
+        'whatsapp': 'WhatsApp',
+        'инстаграм': 'Instagram',
+        'instagram': 'Instagram',
+        'вконтакте': 'VK',
+        'вк': 'VK',
+        'vk': 'VK',
+        'дискорд': 'Discord',
+        'discord': 'Discord',
+        'ютуб': 'YouTube',
+        'youtube': 'YouTube',
+        'спотифай': 'Spotify',
+        'spotify': 'Spotify',
+        'хром': 'chrome',
+        'chrome': 'chrome',
+        'браузер': 'chrome',
+        'яндексбраузер': 'YandexBrowser',
+        'опера': 'Opera',
+        'firefox': 'firefox',
+        'почта': 'Mail',
+        'настройки': 'ms-settings:',
+        'камера': 'microsoft.windows.camera:',
+        'калькулятор': 'calc',
+        'часы': 'AlarmClock',
+        'будильник': 'AlarmClock',
+        'календарь': 'Calendar',
+        'телефон': 'PhoneLink',
+        'зум': 'Zoom',
+        'zoom': 'Zoom',
+        'блокнот': 'notepad',
+        'проводник': 'explorer',
+        'файлы': 'explorer',
+        'paint': 'mspaint',
+        'пейнт': 'mspaint',
+        'word': 'winword',
+        'ворд': 'winword',
+        'excel': 'excel',
+        'эксель': 'excel',
+        'powerpoint': 'powerpnt',
+        'поверпоинт': 'powerpnt',
+        'steam': 'steam',
+        'стим': 'steam',
+        'майнкрафт': 'Minecraft',
+        'minecraft': 'Minecraft',
+        'vscode': 'Code',
+        'вскод': 'Code',
+        'терминал': 'wt',
+        'cmd': 'cmd',
+        'команднаястрока': 'cmd',
+      };
+      final winQ = q;
+      if (winMap[winQ] != null) return winMap[winQ];
+      for (final key in winMap.keys) {
+        if (winQ.contains(key) && key.length >= 3) return winMap[key]!;
+      }
+      return null;
+    }
+    
     const map = {
       // ── Мессенджеры ──
       'телеграм': 'org.telegram.messenger',
