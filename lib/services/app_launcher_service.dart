@@ -190,6 +190,9 @@ class AppLauncherService {
     for (final prefix in openPrefixes) {
       if (text.startsWith(prefix)) return true;
       if (text.contains(' $prefix ')) return true;
+      // Также проверяем содержит ли текст префикс в любом месте
+      // (для фраз типа "можешь открыть телеграм", "пожалуйста открой ютуб")
+      if (text.contains(prefix)) return true;
     }
     return false;
   }
@@ -199,8 +202,14 @@ class AppLauncherService {
     final sorted = List<String>.from(openPrefixes)
       ..sort((a, b) => b.length.compareTo(a.length));
     for (final prefix in sorted) {
+      // Пробуем сначала с начала (самый надёжный случай)
       if (text.startsWith('$prefix ')) {
-        return text.substring(prefix.length).trim();
+        return text.substring(prefix.length + 1).trim();
+      }
+      // Потом ищем в середине текста ("можешь открыть телеграм" → "телеграм")
+      final idx = text.indexOf(' $prefix ');
+      if (idx >= 0) {
+        return text.substring(idx + prefix.length + 2).trim();
       }
     }
     return text;
