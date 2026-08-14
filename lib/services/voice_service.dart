@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class VoiceService {
@@ -17,6 +18,13 @@ class VoiceService {
   /// Инициализация — вызывается один раз, возвращает true если готов
   Future<bool> init() async {
     if (_initialized) return true;
+
+    // На Windows — speech_to_text может не работать, используем заглушку
+    if (Platform.isWindows) {
+      _initialized = false;
+      debugPrint('[Voice] STT not available on Windows');
+      return false;
+    }
 
     final status = await Permission.microphone.request();
     if (!status.isGranted) return false;
