@@ -277,6 +277,21 @@ class MainActivity : FlutterActivity() {
                             result.success(emptyList<Map<String, String>>())
                         }
                     }
+                    "launchUrl" -> {
+                        val url = call.argument<String>("url") ?: ""
+                        if (url.isEmpty()) { result.success(false); return@setMethodCallHandler }
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = android.net.Uri.parse(url)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            Log.e("Airi", "launchUrl failed: ${e.message}")
+                            result.success(false)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
