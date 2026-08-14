@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
-import 'package:sqflite/sqflite.dart';
+// Conditional import — FFI только на desktop
+import 'utils/desktop_db.dart' if (dart.library.html) 'utils/mobile_db.dart' as db;
+
 import 'theme/app_theme.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
@@ -11,10 +12,9 @@ import 'screens/providers_screen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // На Windows — используем FFI для SQLite
+  // На Windows/Linux — используем FFI для SQLite
   if (Platform.isWindows || Platform.isLinux) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+    db.initDesktopDb();
   }
 
   // Только на мобильных — ориентация и статус-бар
