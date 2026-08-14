@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,6 +43,7 @@ class OverlayService {
 
   // ─── Разрешение и показ ─────────────────────────────────────────────
   Future<bool> hasPermission() async {
+    if (Platform.isWindows) return true; // На Windows нет overlay — пропускаем
     try {
       return await _overlayChannel.invokeMethod('hasPermission') ?? false;
     } catch (_) { return false; }
@@ -52,6 +54,7 @@ class OverlayService {
   }
 
   Future<void> show({String state = 'idle'}) async {
+    if (Platform.isWindows) return; // Overlay не поддерживается на Windows
     try {
       await _overlayChannel.invokeMethod('showOverlay', {'state': state});
       await _sendConfig();
