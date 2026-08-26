@@ -15,7 +15,7 @@ class OpenAiTtsService {
   factory OpenAiTtsService() => _instance ??= OpenAiTtsService._internal();
   OpenAiTtsService._internal();
 
-  static const _keyOpenAi = 'openai_tts_key';
+  static const _keyOpenAi = 'openai_key';  // Тот же ключ что и AI сервис
   static const _keyVoice = 'openai_tts_voice';
   static const _keyModel = 'openai_tts_model';
   static const _keySpeed = 'openai_tts_speed';
