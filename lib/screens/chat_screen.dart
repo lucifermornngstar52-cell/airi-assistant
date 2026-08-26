@@ -116,6 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _loading = false;
         });
         _scrollDown();
+        OverlayService.hudStatus('J.A.R.V.I.S. RESPONDING');
         await _tts.speak(launchResult, _persona.type);
         return;
       }
