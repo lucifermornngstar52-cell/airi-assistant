@@ -345,6 +345,49 @@ class MainActivity : FlutterActivity() {
                     }
                     else -> result.notImplemented()
                 }
+    
+        // Accessibility control channel — full phone control from Flutter
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/accessibility").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "tapAt" -> {
+                    val x = (call.argument<Number>("x") ?: 0f).toFloat()
+                    val y = (call.argument<Number>("y") ?: 0f).toFloat()
+                    result.success(AiriAccessibilityService.tapAt(x, y))
+                }
+                "clickByText" -> {
+                    val text = call.argument<String>("text") ?: ""
+                    result.success(AiriAccessibilityService.findAndClickByText(text))
+                }
+                "clickById" -> {
+                    val id = call.argument<String>("id") ?: ""
+                    result.success(AiriAccessibilityService.findAndClickById(id))
+                }
+                "typeText" -> {
+                    val text = call.argument<String>("text") ?: ""
+                    val hint = call.argument<String>("hint")
+                    result.success(AiriAccessibilityService.typeText(text, hint))
+                }
+                "scrollDown" -> result.success(AiriAccessibilityService.scrollDown())
+                "scrollUp" -> result.success(AiriAccessibilityService.scrollUp())
+                "swipe" -> {
+                    val sx = (call.argument<Number>("startX") ?: 0f).toFloat()
+                    val sy = (call.argument<Number>("startY") ?: 0f).toFloat()
+                    val ex = (call.argument<Number>("endX") ?: 0f).toFloat()
+                    val ey = (call.argument<Number>("endY") ?: 0f).toFloat()
+                    result.success(AiriAccessibilityService.swipe(sx, sy, ex, ey))
+                }
+                "pressBack" -> result.success(AiriAccessibilityService.pressBack())
+                "pressHome" -> result.success(AiriAccessibilityService.pressHome())
+                "pressRecents" -> result.success(AiriAccessibilityService.pressRecents())
+                "openNotifications" -> result.success(AiriAccessibilityService.openNotifications())
+                "getScreenText" -> result.success(AiriAccessibilityService.getScreenText())
+                "executeCommand" -> {
+                    val cmd = call.argument<String>("command") ?: ""
+                    result.success(AiriAccessibilityService.executeCommand(cmd))
+                }
+                else -> result.notImplemented()
             }
+        }
+        }
     }
 }
