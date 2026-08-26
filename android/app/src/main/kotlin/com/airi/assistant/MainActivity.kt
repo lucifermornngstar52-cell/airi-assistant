@@ -16,6 +16,62 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Audio focus channel — detect calls and audio conflicts
+        val audioMgr = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+        val phoneMgr = getSystemService(TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+        
+        // Simple audio focus listener
+        val focusListener = object : android.media.AudioManager.OnAudioFocusChangeListener {
+            override fun onAudioFocusChange(focusChange: Int) {
+                when (focusChange) {
+                    android.media.AudioManager.AUDIOFOCUS_LOSS,
+                    android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                        Log.d("AiriAudio", "Audio focus lost — pausing STT")
+                        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/audio")
+                            .invokeMethod("audioFocusLost", null)
+                    }
+                    android.media.AudioManager.AUDIOFOCUS_GAIN -> {
+                        Log.d("AiriAudio", "Audio focus regained — resuming STT")
+                        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/audio")
+                            .invokeMethod("audioFocusGained", null)
+                    }
+                }
+            }
+        }
+        
+        // Method channel for audio control
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/audio").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "requestFocus" -> {
+                    val req = android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                        .setAudioAttributes(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build()
+                        )
+                        .setOnAudioFocusChangeListener(focusListener)
+                        .build()
+                    val r = audioMgr.requestAudioFocus(req)
+                    result.success(r == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+                }
+                "abandonFocus" -> {
+                    result.success(true)
+                }
+                "isCallActive" -> {
+                    try {
+                        val tm = getSystemService(TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+                        val state = tm.callState
+                        result.success(state != android.telephony.TelephonyManager.CALL_STATE_IDLE)
+                    } catch (_: Throwable) {
+                        result.success(false)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+
         // JARVIS HUD: auto-start
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
             try {
