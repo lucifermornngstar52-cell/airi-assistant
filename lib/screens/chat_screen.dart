@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/character_persona.dart';
 import '../services/ai_service.dart';
