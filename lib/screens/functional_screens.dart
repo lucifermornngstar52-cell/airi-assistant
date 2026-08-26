@@ -13,16 +13,17 @@ import '../services/memory_service.dart';
 import '../services/vision_service.dart';
 import '../services/emotion_service.dart';
 import 'persona_screen.dart';
+import '../models/character_persona.dart';
 
 // ═══════════════════════════════════════════════════════
 // NEWS SCREEN — fetches real news via API
 // ═══════════════════════════════════════════════════════
-class _NewsScreen extends StatefulWidget {
-  const _NewsScreen();
-  @override State<_NewsScreen> createState() => _NewsScreenState();
+class NewsScreen extends StatefulWidget {
+  const NewsScreen();
+  @override State<NewsScreen> createState() => NewsScreenState();
 }
 
-class _NewsScreenState extends State<_NewsScreen> {
+class NewsScreenState extends State<_NewsScreen> {
   List<Map<String, dynamic>> _news = [];
   bool _loading = true;
   String? _error;
@@ -142,12 +143,12 @@ class _NewsScreenState extends State<_NewsScreen> {
 // ═══════════════════════════════════════════════════════
 // REMINDERS SCREEN — local reminders with SharedPreferences
 // ═══════════════════════════════════════════════════════
-class _RemindersScreen extends StatefulWidget {
-  const _RemindersScreen();
-  @override State<_RemindersScreen> createState() => _RemindersScreenState();
+class RemindersScreen extends StatefulWidget {
+  const RemindersScreen();
+  @override State<RemindersScreen> createState() => RemindersScreenState();
 }
 
-class _RemindersScreenState extends State<_RemindersScreen> {
+class RemindersScreenState extends State<_RemindersScreen> {
   List<String> _reminders = [];
   final _controller = TextEditingController();
 
@@ -230,12 +231,12 @@ class _RemindersScreenState extends State<_RemindersScreen> {
 // ═══════════════════════════════════════════════════════
 // SHOPPING LIST SCREEN — local shopping list
 // ═══════════════════════════════════════════════════════
-class _ShopListScreen extends StatefulWidget {
-  const _ShopListScreen();
-  @override State<_ShopListScreen> createState() => _ShopListScreenState();
+class ShopListScreen extends StatefulWidget {
+  const ShopListScreen();
+  @override State<ShopListScreen> createState() => ShopListScreenState();
 }
 
-class _ShopListScreenState extends State<_ShopListScreen> {
+class ShopListScreenState extends State<_ShopListScreen> {
   List<Map<String, dynamic>> _items = [];
   final _controller = TextEditingController();
   String _category = 'Продукты';
@@ -349,12 +350,12 @@ class _ShopListScreenState extends State<_ShopListScreen> {
 // ═══════════════════════════════════════════════════════
 // CLIPBOARD SCREEN — read/write clipboard
 // ═══════════════════════════════════════════════════════
-class _ClipboardScreen extends StatefulWidget {
-  const _ClipboardScreen();
-  @override State<_ClipboardScreen> createState() => _ClipboardScreenState();
+class ClipboardScreen extends StatefulWidget {
+  const ClipboardScreen();
+  @override State<ClipboardScreen> createState() => ClipboardScreenState();
 }
 
-class _ClipboardScreenState extends State<_ClipboardScreen> {
+class ClipboardScreenState extends State<_ClipboardScreen> {
   String _currentClip = '';
   List<String> _history = [];
   final _controller = TextEditingController();
@@ -378,7 +379,7 @@ class _ClipboardScreenState extends State<_ClipboardScreen> {
 
   Future<void> _readClipboard() async {
     final data = await Clipboard.getData('text/plain');
-    setState(() { _currentClip = data?['text'] ?? ''; _controller.text = _currentClip; });
+    setState(() { _currentClip = data?.text ?? ''; _controller.text = _currentClip; });
   }
 
   Future<void> _copy() async {
@@ -399,7 +400,7 @@ class _ClipboardScreenState extends State<_ClipboardScreen> {
 
   Future<void> _paste() async {
     final data = await Clipboard.getData('text/plain');
-    setState(() { _currentClip = data?['text'] ?? ''; _controller.text = _currentClip; });
+    setState(() { _currentClip = data?.text ?? ''; _controller.text = _currentClip; });
   }
 
   @override
@@ -466,12 +467,12 @@ class _ClipboardScreenState extends State<_ClipboardScreen> {
 // ═══════════════════════════════════════════════════════
 // PERSONALITY SCREEN — shows AI personality state
 // ═══════════════════════════════════════════════════════
-class _PersonalityScreen extends StatefulWidget {
-  const _PersonalityScreen();
-  @override State<_PersonalityScreen> createState() => _PersonalityScreenState();
+class PersonalityScreen extends StatefulWidget {
+  const PersonalityScreen();
+  @override State<PersonalityScreen> createState() => PersonalityScreenState();
 }
 
-class _PersonalityScreenState extends State<_PersonalityScreen> {
+class PersonalityScreenState extends State<_PersonalityScreen> {
   String _personaName = 'JARVIS';
   int _interactions = 0;
   String _mood = 'Нейтральный';
@@ -544,12 +545,12 @@ class _PersonalityScreenState extends State<_PersonalityScreen> {
 // ═══════════════════════════════════════════════════════
 // VOICE TEST SCREEN — test speech to text
 // ═══════════════════════════════════════════════════════
-class _VoiceTestScreen extends StatefulWidget {
-  const _VoiceTestScreen();
-  @override State<_VoiceTestScreen> createState() => _VoiceTestScreenState();
+class VoiceTestScreen extends StatefulWidget {
+  const VoiceTestScreen();
+  @override State<VoiceTestScreen> createState() => VoiceTestScreenState();
 }
 
-class _VoiceTestScreenState extends State<_VoiceTestScreen> {
+class VoiceTestScreenState extends State<_VoiceTestScreen> {
   final _voice = VoiceService();
   String _text = '';
   bool _listening = false;
@@ -635,12 +636,12 @@ class _VoiceTestScreenState extends State<_VoiceTestScreen> {
 // ═══════════════════════════════════════════════════════
 // TTS TEST SCREEN — test text-to-speech
 // ═══════════════════════════════════════════════════════
-class _TtsTestScreen extends StatefulWidget {
-  const _TtsTestScreen();
-  @override State<_TtsTestScreen> createState() => _TtsTestScreenState();
+class TtsTestScreen extends StatefulWidget {
+  const TtsTestScreen();
+  @override State<TtsTestScreen> createState() => TtsTestScreenState();
 }
 
-class _TtsTestScreenState extends State<_TtsTestScreen> {
+class TtsTestScreenState extends State<_TtsTestScreen> {
   final _tts = TtsService();
   final _controller = TextEditingController(text: 'Сэр, все системы функционируют в штатном режиме.');
   bool _speaking = false;
@@ -716,8 +717,8 @@ class _TtsTestScreenState extends State<_TtsTestScreen> {
 // ═══════════════════════════════════════════════════════
 // CHAT INFO SCREEN
 // ═══════════════════════════════════════════════════════
-class _ChatInfoScreen extends StatelessWidget {
-  const _ChatInfoScreen();
+class ChatInfoScreen extends StatelessWidget {
+  const ChatInfoScreen();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -761,12 +762,12 @@ class _ChatInfoScreen extends StatelessWidget {
 // ═══════════════════════════════════════════════════════
 // VISION TEST SCREEN — take photo and analyze
 // ═══════════════════════════════════════════════════════
-class _VisionTestScreen extends StatefulWidget {
-  const _VisionTestScreen();
-  @override State<_VisionTestScreen> createState() => _VisionTestScreenState();
+class VisionTestScreen extends StatefulWidget {
+  const VisionTestScreen();
+  @override State<VisionTestScreen> createState() => VisionTestScreenState();
 }
 
-class _VisionTestScreenState extends State<_VisionTestScreen> {
+class VisionTestScreenState extends State<_VisionTestScreen> {
   final _vision = VisionService();
   String _result = '';
   bool _loading = false;
@@ -774,7 +775,9 @@ class _VisionTestScreenState extends State<_VisionTestScreen> {
   Future<void> _capture() async {
     setState(() { _loading = true; _result = ''; });
     try {
-      final result = await _vision.captureAndAnalyze('Опиши что на фото');
+      final photo = await _vision.capturePhoto();
+      if (photo == null) { setState(() { _result = 'Фото не сделано'; _loading = false; }); return; }
+      final result = await _vision.analyzeImage(photo, 'Опиши что на фото');
       setState(() { _result = result; _loading = false; });
     } catch (e) {
       setState(() { _result = 'Ошибка: $e'; _loading = false; });
@@ -838,12 +841,12 @@ class _VisionTestScreenState extends State<_VisionTestScreen> {
 // ═══════════════════════════════════════════════════════
 // EMOTION TEST SCREEN
 // ═══════════════════════════════════════════════════════
-class _EmotionTestScreen extends StatefulWidget {
-  const _EmotionTestScreen();
-  @override State<_EmotionTestScreen> createState() => _EmotionTestScreenState();
+class EmotionTestScreen extends StatefulWidget {
+  const EmotionTestScreen();
+  @override State<EmotionTestScreen> createState() => EmotionTestScreenState();
 }
 
-class _EmotionTestScreenState extends State<_EmotionTestScreen> {
+class EmotionTestScreenState extends State<_EmotionTestScreen> {
   final _emotion = EmotionService();
   String _emotion = '';
   bool _watching = false;
@@ -851,23 +854,23 @@ class _EmotionTestScreenState extends State<_EmotionTestScreen> {
   @override
   void initState() {
     super.initState();
-    _emotion.onEmotionDetected = (e) {
-      if (mounted) setState(() => _emotion = e);
+    _emotionSvc.onEmotionDetected = (e) {
+      if (mounted) setState(() => _currentEmotion = e);
     };
   }
 
   @override
   void dispose() {
-    _emotion.stop();
+    _emotionSvc.stop();
     super.dispose();
   }
 
   void _toggle() {
     if (_watching) {
-      _emotion.stop();
+      _emotionSvc.stop();
       setState(() { _watching = false; });
     } else {
-      _emotion.start();
+      _emotionSvc.start();
       setState(() { _watching = true; });
     }
   }
@@ -888,12 +891,12 @@ class _EmotionTestScreenState extends State<_EmotionTestScreen> {
           Icon(_watching ? Icons.face : Icons.face_retouching_off, size: 80,
             color: _watching ? AppTheme.accentBlue : AppTheme.textSecondary),
           const SizedBox(height: 20),
-          if (_emotion.isNotEmpty)
+          if (_currentEmotion.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(color: AppTheme.accentBlue.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20)),
-              child: Text(_emotion, style: const TextStyle(color: AppTheme.accentBlue, fontSize: 20, fontWeight: FontWeight.w600)),
+              child: Text(_currentEmotion, style: const TextStyle(color: AppTheme.accentBlue, fontSize: 20, fontWeight: FontWeight.w600)),
             ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
@@ -930,13 +933,13 @@ class _EmotionTestScreenState extends State<_EmotionTestScreen> {
 // ═══════════════════════════════════════════════════════
 // MEMORY VIEW SCREEN — view and clear memory
 // ═══════════════════════════════════════════════════════
-class _MemoryViewScreen extends StatefulWidget {
-  const _MemoryViewScreen();
-  @override State<_MemoryViewScreen> createState() => _MemoryViewScreenState();
+class MemoryViewScreen extends StatefulWidget {
+  const MemoryViewScreen();
+  @override State<MemoryViewScreen> createState() => MemoryViewScreenState();
 }
 
-class _MemoryViewScreenState extends State<_MemoryViewScreen> {
-  List<Map<String, dynamic>> _messages = [];
+class MemoryViewScreenState extends State<_MemoryViewScreen> {
+  List<Map<String, String>> _messages = [];
   List<Map<String, String>> _facts = [];
   bool _loading = true;
 
@@ -949,8 +952,8 @@ class _MemoryViewScreenState extends State<_MemoryViewScreen> {
   Future<void> _load() async {
     final mem = MemoryService();
     await mem.init();
-    final msgs = await mem.getHistory(limit: 50);
-    final facts = await mem.getFacts();
+    final msgs = await mem.getRecentMessages(limit: 50);
+    final facts = await mem.getAllFacts();
     setState(() { _messages = msgs; _facts = facts; _loading = false; });
   }
 
@@ -994,7 +997,7 @@ class _MemoryViewScreenState extends State<_MemoryViewScreen> {
                 color: AppTheme.cardColor, margin: const EdgeInsets.only(bottom: 6),
                 child: ListTile(
                   leading: Icon(m['role'] == 'user' ? Icons.person : Icons.smart_toy, color: AppTheme.accentBlue, size: 20),
-                  title: Text(m['content'] as String? ?? '', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                  title: Text(m['content'] ?? '', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
                     maxLines: 3, overflow: TextOverflow.ellipsis),
                 ),
               )),
@@ -1007,8 +1010,8 @@ class _MemoryViewScreenState extends State<_MemoryViewScreen> {
 // ═══════════════════════════════════════════════════════
 // WEB SEARCH INFO SCREEN
 // ═══════════════════════════════════════════════════════
-class _WebSearchInfoScreen extends StatelessWidget {
-  const _WebSearchInfoScreen();
+class WebSearchInfoScreen extends StatelessWidget {
+  const WebSearchInfoScreen();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
