@@ -72,15 +72,6 @@ class MainActivity : FlutterActivity() {
         }
 
 
-        // JARVIS HUD: auto-start
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-            try {
-                val hudIntent = Intent(this, JarvisHudService::class.java)
-                    .setAction(JarvisHudService.ACTION_SHOW)
-                ContextCompat.startForegroundService(this, hudIntent)
-            } catch (_: Throwable) {}
-        }
-
         // JARVIS HUD channel from Flutter
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/hud").setMethodCallHandler { call, result ->
             when (call.method) {
