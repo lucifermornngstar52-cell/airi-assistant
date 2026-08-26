@@ -13,6 +13,7 @@ import 'weather_screen.dart';
 import 'schedule_screen.dart';
 import 'mood_diary_screen.dart';
 import 'scenes_screen.dart';
+import 'functional_screens.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
