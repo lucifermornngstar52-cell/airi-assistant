@@ -1136,7 +1136,7 @@ class _VoiceControlScreenState extends State<VoiceControlScreen> {
                   style: TextStyle(color: _listening ? AppTheme.accentBlue : AppTheme.textSecondary, fontSize: 15)),
                 const SizedBox(height: 8),
                 if (_heard.isNotEmpty)
-                  Text('Услышал: "$heard"', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                  Text('Услышал: "$_heard"', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
