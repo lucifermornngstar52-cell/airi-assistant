@@ -6,21 +6,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// OpenAiTtsService — TTS через OpenAI Audio API.
-/// Голос "onyx" — самый близкий к JARVIS (Пол Беттани) из доступных.
-///
-/// Модели: tts-1 (быстрее), tts-1-hd (качественнее)
-/// Голоса: alloy, echo, fable, onyx, nova, shimmer
+/// Голос "onyx" — JARVIS-стиль (мужской, спокойный).
 class OpenAiTtsService {
   static OpenAiTtsService? _instance;
   factory OpenAiTtsService() => _instance ??= OpenAiTtsService._internal();
   OpenAiTtsService._internal();
 
-  static const _keyOpenAi = 'openai_key';  // Тот же ключ что и AI сервис
+  static const _keyOpenAi = 'openai_key';
   static const _keyVoice = 'openai_tts_voice';
   static const _keyModel = 'openai_tts_model';
   static const _keySpeed = 'openai_tts_speed';
 
-  static const _defaultVoice = 'onyx';   // JARVIS-подобный
+  static const _defaultVoice = 'onyx';
   static const _defaultModel = 'tts-1-hd';
   static const _defaultSpeed = 1.0;
 
@@ -31,25 +28,24 @@ class OpenAiTtsService {
   bool _initialized = false;
 
   final AudioPlayer _player = AudioPlayer();
-  bool _setSpeaking(false);
-  bool get isSpeaking => _isSpeaking;
+  bool _speaking = false;
+  bool get isSpeaking => _speaking;
 
-  /// Колбэк изменения состояния речи (для интеграции с TtsService)
+  /// Колбэк изменения состояния речи
   void Function(bool speaking)? onSpeakingChanged;
 
   void _setSpeaking(bool v) {
-    _isSpeaking = v;
+    _speaking = v;
     onSpeakingChanged?.call(v);
   }
 
-  /// Голоса, доступные в OpenAI TTS
   static const voices = [
-    {'id': 'onyx',   'label': '🤖 Onyx  (JARVIS-стиль, мужской)'},
-    {'id': 'echo',   'label': '🎙️ Echo  (мужской, спокойный)'},
-    {'id': 'fable',  'label': '📖 Fable (британский, мягкий)'},
-    {'id': 'alloy',  'label': '⚙️ Alloy (нейтральный)'},
-    {'id': 'nova',   'label': '✨ Nova  (женский)'},
-    {'id': 'shimmer', 'label': '💫 Shimmer (женский, тёплый)'},
+    {'id': 'onyx',    'label': 'Onyx (JARVIS)'},
+    {'id': 'echo',    'label': 'Echo'},
+    {'id': 'fable',   'label': 'Fable'},
+    {'id': 'alloy',   'label': 'Alloy'},
+    {'id': 'nova',    'label': 'Nova'},
+    {'id': 'shimmer', 'label': 'Shimmer'},
   ];
 
   Future<void> init() async {
@@ -58,15 +54,15 @@ class OpenAiTtsService {
     _apiKey = prefs.getString(_keyOpenAi) ?? '';
     _voice = prefs.getString(_keyVoice) ?? _defaultVoice;
     _model = prefs.getString(_keyModel) ?? _defaultModel;
-    _speed = (prefs.getDouble(_keySpeed) ?? _defaultSpeed);
-    _player.onPlayerComplete.listen((_) { _setSpeaking(false); });
+    _speed = prefs.getDouble(_keySpeed) ?? _defaultSpeed;
+    _player.onPlayerComplete.listen((_) => _setSpeaking(false));
     _initialized = true;
   }
 
-  void setApiKey(String k) { _apiKey = k; }
-  void setVoice(String v) { _voice = v; }
-  void setModel(String m) { _model = m; }
-  void setSpeed(double s) { _speed = s; }
+  void setApiKey(String k) => _apiKey = k;
+  void setVoice(String v) => _voice = v;
+  void setModel(String m) => _model = m;
+  void setSpeed(double s) => _speed = s;
 
   Future<void> saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -76,8 +72,6 @@ class OpenAiTtsService {
     await prefs.setDouble(_keySpeed, _speed);
   }
 
-  /// Синтезирует речь и проигрывает её.
-  /// [text] — текст для озвучки.
   Future<void> speak(String text) async {
     if (_apiKey.isEmpty) {
       _setSpeaking(false);
@@ -87,9 +81,8 @@ class OpenAiTtsService {
     await init();
     _setSpeaking(true);
     try {
-      final url = Uri.parse('https://api.openai.com/v1/audio/speech');
       final resp = await http.post(
-        url,
+        Uri.parse('https://api.openai.com/v1/audio/speech'),
         headers: {
           'Authorization': 'Bearer $_apiKey',
           'Content-Type': 'application/json',
@@ -103,11 +96,10 @@ class OpenAiTtsService {
         }),
       );
       if (resp.statusCode == 200) {
-        final bytes = resp.bodyBytes;
         final dir = await getTemporaryDirectory();
         final file = File('${dir.path}/jarvis_tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
-        await file.writeAsBytes(bytes);
-        await _player.play(file.path);
+        await file.writeAsBytes(resp.bodyBytes);
+        await _player.play(DeviceFileSource(file.path));
       } else {
         _setSpeaking(false);
       }
