@@ -19,7 +19,8 @@ class VoiceService {
   // ── Wake word detection ──
   bool _wakeWordMode = false;
   Timer? _wakeRestartTimer;
-  static const _wakeWords = ['джарвис', 'jarvis', 'айка', 'aika', 'аири', 'airi', 'джарвес', 'жарвис'];
+  Timer? _watchdogTimer;
+  static const _wakeWords = ['джарвис', 'jarvis', 'айка', 'aika', 'аири', 'airi', 'джарвес', 'жарвис', 'айри', 'ари'];
   void Function()? onWakeWordDetected;
 
   bool get isListening => _listening;
@@ -30,57 +31,58 @@ class VoiceService {
     if (_initialized) return true;
     if (Platform.isWindows) {
       _initialized = false;
-      debugPrint('[Voice] STT not available on Windows');
       return false;
     }
     final status = await Permission.microphone.request();
     if (!status.isGranted) return false;
+
     _initialized = await _stt.initialize(
       onError: (e) {
         debugPrint('[Voice] onError: ${e.permanent}');
         _listening = false;
-        _partialText = '';
         _errorCount++;
-        if (e.permanent) return;
-        if (_errorCount < 5) {
+        // ALWAYS retry — never give up on wake word mode
+        if (_wakeWordMode) {
           _retryTimer?.cancel();
-          _retryTimer = Timer(const Duration(milliseconds: 800), () {
-            if (_wakeWordMode) {
-              _startWakeWordLoop();
-            } else {
-              _retryRelisten();
-            }
+          _retryTimer = Timer(const Duration(milliseconds: 500), () {
+            _startWakeWordLoop();
           });
-        } else {
-          // Reset and try again after longer delay
-          _errorCount = 0;
-          _retryTimer = Timer(const Duration(seconds: 3), () {
-            if (_wakeWordMode) _startWakeWordLoop();
-          });
+        } else if (!e.permanent && _errorCount < 10) {
+          _retryTimer?.cancel();
+          _retryTimer = Timer(const Duration(milliseconds: 800), _retryRelisten);
         }
       },
       onStatus: (status) {
         debugPrint('[Voice] status: $status');
         if (status == SpeechToText.notListeningStatus) {
-          Future.delayed(const Duration(milliseconds: 300), () {
+          Future.delayed(const Duration(milliseconds: 200), () {
             if (_listening && !_stt.isListening) {
               _listening = false;
-              // In wake word mode, restart listening immediately
               if (_wakeWordMode) {
                 _wakeRestartTimer?.cancel();
-                _wakeRestartTimer = Timer(const Duration(milliseconds: 200), _startWakeWordLoop);
+                _wakeRestartTimer = Timer(const Duration(milliseconds: 100), _startWakeWordLoop);
               }
             }
           });
         }
       },
     );
+
+    // Start watchdog — checks every 2 seconds if STT is alive
+    if (_initialized && _watchdogTimer == null) {
+      _watchdogTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+        if (_wakeWordMode && !_listening && !_stt.isListening) {
+          debugPrint('[Voice] watchdog: STT dead, restarting...');
+          _startWakeWordLoop();
+        }
+      });
+    }
+
     return _initialized;
   }
 
   void _retryRelisten() {
     if (_lastOnResult == null) return;
-    debugPrint('[Voice] retry listen...');
     _stt.listen(
       onResult: _onResult,
       localeId: 'ru_RU',
@@ -101,7 +103,6 @@ class VoiceService {
       _errorCount = 0;
 
       if (_wakeWordMode) {
-        // Check for wake word
         final text = r.recognizedWords.trim().toLowerCase();
         debugPrint('[Voice] wake word check: "$text"');
         for (final word in _wakeWords) {
@@ -111,22 +112,23 @@ class VoiceService {
             return;
           }
         }
-        // Not a wake word — restart loop
+        // Not a wake word — restart immediately
         _wakeRestartTimer?.cancel();
-        _wakeRestartTimer = Timer(const Duration(milliseconds: 200), _startWakeWordLoop);
+        _wakeRestartTimer = Timer(const Duration(milliseconds: 50), _startWakeWordLoop);
       } else {
         _lastOnResult?.call(r.recognizedWords.trim());
       }
     }
   }
 
-  // ── Wake Word Mode ──
+  // ── Wake Word Mode — aggressive continuous listening ──
   Future<bool> startWakeWordMode() async {
     final ready = await init();
     if (!ready) return false;
     _wakeWordMode = true;
+    _errorCount = 0;
     _startWakeWordLoop();
-    debugPrint('[Voice] wake word mode started');
+    debugPrint('[Voice] wake word mode started — watchdog active');
     return true;
   }
 
@@ -139,8 +141,8 @@ class VoiceService {
       onResult: _onResult,
       localeId: 'ru_RU',
       listenMode: ListenMode.search,
-      pauseFor: const Duration(seconds: 3),
-      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 2),
+      listenFor: const Duration(seconds: 15),
       partialResults: true,
     );
   }
@@ -149,6 +151,8 @@ class VoiceService {
     _wakeWordMode = false;
     _wakeRestartTimer?.cancel();
     _wakeRestartTimer = null;
+    _watchdogTimer?.cancel();
+    _watchdogTimer = null;
     _listening = false;
     _stt.stop();
     debugPrint('[Voice] wake word mode stopped');
@@ -162,7 +166,6 @@ class VoiceService {
     final ready = await init();
     if (!ready) return false;
 
-    // Stop wake word mode while in conversation
     if (_wakeWordMode) {
       _stt.stop();
     }
@@ -191,16 +194,16 @@ class VoiceService {
     _retryTimer?.cancel();
     await _stt.stop();
 
-    // Resume wake word mode if it was active
     if (_wakeWordMode) {
       _wakeRestartTimer?.cancel();
-      _wakeRestartTimer = Timer(const Duration(milliseconds: 500), _startWakeWordLoop);
+      _wakeRestartTimer = Timer(const Duration(milliseconds: 300), _startWakeWordLoop);
     }
   }
 
   void dispose() {
     _retryTimer?.cancel();
     _wakeRestartTimer?.cancel();
+    _watchdogTimer?.cancel();
     _wakeWordMode = false;
     _stt.cancel();
   }
