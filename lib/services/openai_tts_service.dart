@@ -31,8 +31,16 @@ class OpenAiTtsService {
   bool _initialized = false;
 
   final AudioPlayer _player = AudioPlayer();
-  bool _isSpeaking = false;
+  bool _setSpeaking(false);
   bool get isSpeaking => _isSpeaking;
+
+  /// Колбэк изменения состояния речи (для интеграции с TtsService)
+  void Function(bool speaking)? onSpeakingChanged;
+
+  void _setSpeaking(bool v) {
+    _isSpeaking = v;
+    onSpeakingChanged?.call(v);
+  }
 
   /// Голоса, доступные в OpenAI TTS
   static const voices = [
@@ -51,7 +59,7 @@ class OpenAiTtsService {
     _voice = prefs.getString(_keyVoice) ?? _defaultVoice;
     _model = prefs.getString(_keyModel) ?? _defaultModel;
     _speed = (prefs.getDouble(_keySpeed) ?? _defaultSpeed);
-    _player.onPlayerComplete.listen((_) { _isSpeaking = false; });
+    _player.onPlayerComplete.listen((_) { _setSpeaking(false); });
     _initialized = true;
   }
 
@@ -72,12 +80,12 @@ class OpenAiTtsService {
   /// [text] — текст для озвучки.
   Future<void> speak(String text) async {
     if (_apiKey.isEmpty) {
-      _isSpeaking = false;
+      _setSpeaking(false);
       return;
     }
     if (text.trim().isEmpty) return;
     await init();
-    _isSpeaking = true;
+    _setSpeaking(true);
     try {
       final url = Uri.parse('https://api.openai.com/v1/audio/speech');
       final resp = await http.post(
@@ -101,15 +109,15 @@ class OpenAiTtsService {
         await file.writeAsBytes(bytes);
         await _player.play(file.path);
       } else {
-        _isSpeaking = false;
+        _setSpeaking(false);
       }
     } catch (_) {
-      _isSpeaking = false;
+      _setSpeaking(false);
     }
   }
 
   Future<void> stop() async {
     await _player.stop();
-    _isSpeaking = false;
+    _setSpeaking(false);
   }
 }
