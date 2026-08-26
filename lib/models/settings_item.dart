@@ -25,7 +25,7 @@ const settingsItems = [
     route: '/modules/voicecontrol',
     badge: 'active',
   ),
-──────────────────────────────────────
+  // -- Active modules --
   SettingsItem(
     title: 'Чат с AI',
     subtitle: 'GPT-5 • распознавание изображений',
