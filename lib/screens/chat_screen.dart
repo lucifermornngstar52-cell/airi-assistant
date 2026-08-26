@@ -488,17 +488,23 @@ _voice.stopWakeWordMode();
               Text(
                 _speaking
                     ? 'говорит...'
-                    : _emotionWatching && _userEmotion != null
-                        ? 'видит: $_userEmotion'
-                        : _emotionWatching
-                            ? 'наблюдает за вами'
-                            : 'онлайн',
+                    : _listening
+                        ? 'слушаю...'
+                        : _emotionWatching && _userEmotion != null
+                            ? 'видит: $_userEmotion'
+                            : _emotionWatching
+                                ? 'наблюдает за вами'
+                                : _wakeStatus
+                                    ? 'слушаю wake word'
+                                    : 'онлайн',
                 style: TextStyle(
                   color: _speaking
                       ? AppTheme.accentPurple
-                      : _emotionWatching
+                      : _listening
                           ? AppTheme.accentBlue
-                          : Colors.greenAccent,
+                          : _emotionWatching
+                              ? AppTheme.accentBlue
+                              : Colors.greenAccent,
                   fontSize: 11,
                 ),
               ),
@@ -506,6 +512,17 @@ _voice.stopWakeWordMode();
           ]),
         ),
         actions: [
+          // Wake word indicator
+          if (_wakeStatus)
+            Container(
+              margin: const EdgeInsets.only(top: 18, right: 4),
+              width: 8, height: 8,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.4), blurRadius: 4)],
+              ),
+            ),
           // Кнопка TTS — иконка динамика
           IconButton(
             icon: AnimatedSwitcher(
