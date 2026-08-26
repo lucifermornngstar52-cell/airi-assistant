@@ -4,22 +4,25 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Path
+import android.graphics.Rect
 import android.os.Build
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 
 /**
  * AiriAccessibilityService — управление тапами и интеграция с JARVIS HUD.
- * Минимальная версия: тапы по координатам + триггер HUD-прицела.
+ * Ловит физические тапы пользователя через accessibility events
+ * и показывает прицел HUD в точке касания.
  */
 class AiriAccessibilityService : AccessibilityService() {
 
     companion object {
         @Volatile private var instance: AiriAccessibilityService? = null
+        private const val TAG = "AiriA11y"
 
-        /** Программный тап по координатам. Вызывается из Flutter через MethodChannel. */
         fun tapAt(x: Float, y: Float): Boolean {
             val svc = instance ?: return false
-            // ── JARVIS HUD targeting animation ──
             try { JarvisHudService.showTarget(x, y) } catch (_: Throwable) {}
             val path = Path().apply { moveTo(x, y); lineTo(x + 1f, y + 1f) }
             val stroke = GestureDescription.StrokeDescription(path, 0L, 50L)
@@ -42,7 +45,7 @@ class AiriAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        // ── Запускаем JARVIS HUD оверлей при активации accessibility ──
+        Log.d(TAG, "Accessibility service connected")
         try {
             val i = Intent(this, JarvisHudService::class.java)
                 .setAction(JarvisHudService.ACTION_SHOW)
@@ -54,7 +57,35 @@ class AiriAccessibilityService : AccessibilityService() {
         } catch (_: Throwable) {}
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* no-op */ }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
+        // Ловим клики пользователя — показываем прицел HUD
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_VIEW_CLICKED,
+            AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> {
+                try {
+                    val source = event.source
+                    if (source != null) {
+                        val bounds = Rect()
+                        source.getBoundsInScreen(bounds)
+                        val cx = bounds.centerX().toFloat()
+                        val cy = bounds.centerY().toFloat()
+                        Log.d(TAG, "Tap at ($cx, $cy)")
+                        JarvisHudService.showTarget(cx, cy)
+                        source.recycle()
+                    } else {
+                        // Fallback: use event coordinates if available
+                        val cx = event.x
+                        val cy = event.y
+                        if (cx > 0 && cy > 0) {
+                            JarvisHudService.showTarget(cx, cy)
+                        }
+                    }
+                } catch (_: Throwable) {}
+            }
+        }
+    }
+
     override fun onInterrupt() { /* no-op */ }
 
     override fun onDestroy() {
