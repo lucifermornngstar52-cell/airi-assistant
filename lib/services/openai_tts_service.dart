@@ -75,7 +75,7 @@ class OpenAiTtsService {
   Future<void> speak(String text) async {
     if (_apiKey.isEmpty) {
       _setSpeaking(false);
-      return;
+      throw Exception('No API key');
     }
     if (text.trim().isEmpty) return;
     await init();
@@ -102,9 +102,11 @@ class OpenAiTtsService {
         await _player.play(DeviceFileSource(file.path));
       } else {
         _setSpeaking(false);
+        throw Exception('OpenAI TTS API error: ${resp.statusCode}');
       }
-    } catch (_) {
+    } catch (e) {
       _setSpeaking(false);
+      rethrow;
     }
   }
 
