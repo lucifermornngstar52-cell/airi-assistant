@@ -59,22 +59,22 @@ class SettingsScreen extends StatelessWidget {
         screen = const ProvidersScreen();
         break;
       case '/modules/voice':
-        screen = const _VoiceTestScreen();
+        screen = const VoiceTestScreen();
         break;
       case '/modules/tts':
-        screen = const _TtsTestScreen();
+        screen = const TtsTestScreen();
         break;
       case '/modules/chat':
-        screen = const _ChatInfoScreen();
+        screen = const ChatInfoScreen();
         break;
       case '/modules/vision':
-        screen = const _VisionTestScreen();
+        screen = const VisionTestScreen();
         break;
       case '/modules/emotion':
-        screen = const _EmotionTestScreen();
+        screen = const EmotionTestScreen();
         break;
       case '/memory':
-        screen = const _MemoryViewScreen();
+        screen = const MemoryViewScreen();
         break;
       case '/models':
         screen = const Live2DSettingsScreen();
@@ -92,22 +92,22 @@ class SettingsScreen extends StatelessWidget {
         screen = const MoodDiaryScreen();
         break;
       case '/ext/websearch':
-        screen = const _WebSearchInfoScreen();
+        screen = const WebSearchInfoScreen();
         break;
       case '/ext/news':
-        screen = const _NewsScreen();
+        screen = const NewsScreen();
         break;
       case '/ext/reminders':
-        screen = const _RemindersScreen();
+        screen = const RemindersScreen();
         break;
       case '/ext/shoplist':
-        screen = const _ShopListScreen();
+        screen = const ShopListScreen();
         break;
       case '/ext/personality':
-        screen = const _PersonalityScreen();
+        screen = const PersonalityScreen();
         break;
       case '/ext/clipboard':
-        screen = const _ClipboardScreen();
+        screen = const ClipboardScreen();
         break;
       case '/scenes':
         screen = const ScenesScreen();
