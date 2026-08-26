@@ -47,9 +47,6 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _userEmotion;
   bool _emotionWatching = false;
   bool _wakeWordActive = false;
-  Timer? _proactiveTimer;
-  DateTime? _lastUserMessage;
-  bool _hasGreeted = false;
   String? _emotionError;
   File? _pendingImage;
   final _overlay = OverlayService();
@@ -62,7 +59,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _initEmotionWatcher();
     _initMemory();
     _initWakeWord();
-    _initProactive();
   }
 
   Future<void> _initMemory() async {
@@ -89,6 +85,8 @@ class _ChatScreenState extends State<ChatScreen> {
       debugPrint('[Chat] Wake word detected!');
       if (!mounted) return;
       setState(() => _wakeWordActive = true);
+      OverlayService.hudShow();
+      OverlayService.hudStatus('LISTENING...');
       _toggleVoice();
     };
     Future.delayed(const Duration(seconds: 2), () {
@@ -100,94 +98,14 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  /// Proactive conversation — JARVIS initiates dialogue like a real person
-  void _initProactive() {
-    _lastUserMessage = DateTime.now();
-    // Greeting on first launch
-    if (!_hasGreeted) {
-      _hasGreeted = true;
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted && _messages.isEmpty) _proactiveGreeting();
-      });
-    }
-    // Check every 90 seconds if we should say something
-    _proactiveTimer = Timer.periodic(const Duration(seconds: 90), (_) {
-      if (!mounted || _loading || _listening) return;
-      final now = DateTime.now();
-      if (_lastUserMessage != null) {
-        final silence = now.difference(_lastUserMessage!);
-        // After 3+ minutes of silence, JARVIS checks in
-        if (silence.inMinutes >= 3) {
-          _proactiveCheckIn();
-        }
-      }
-    });
-  }
-
-  void _proactiveGreeting() async {
-    final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 6) {
-      greeting = 'Сэр, уже ${hour} утра. Раннее начало? Чем могу помочь?';
-    } else if (hour < 12) {
-      greeting = 'Доброе утро, сэр. Системы в норме, все модули активны. Что на повестке?';
-    } else if (hour < 18) {
-      greeting = 'Добрый день, сэр. Я к вашим услугам.';
-    } else if (hour < 22) {
-      greeting = 'Добрый вечер, сэр. Чем займёмся?';
-    } else {
-      greeting = 'Сэр, уже поздно. Надеюсь, вы не перерабатываете?';
-    }
-
-    setState(() {
-      _messages.add(ChatMessage(text: greeting, isUser: false));
-    });
-    _scrollDown();
-    _ai.saveToMemory('assistant', greeting, persona: _persona.type.name);
-    setState(() => _speaking = true);
-    await _tts.speak(greeting, _persona.type);
-    if (mounted) setState(() => _speaking = false);
-  }
-
-  void _proactiveCheckIn() async {
-    final emotion = _userEmotion;
-    String prompt;
-    if (emotion != null) {
-      prompt = 'Пользователь молчит уже несколько минут. Его эмоция: $emotion. '
-          'Скажи что-нибудь короткое и естественное — как живой человек, '
-          'который заметил что собеседник замолчал. 1-2 предложения. Без эмодзи.';
-    } else {
-      prompt = 'Пользователь молчит уже несколько минут. '
-          'Скажи что-нибудь короткое и естественное — как живой человек, '
-          'который заметил что собеседник замолчал. 1-2 предложения. Без эмодзи.';
-    }
-
-    final history = _messages
-        .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
-        .toList();
-    history.add({'role': 'system', 'content': prompt});
-
-    final reply = await _ai.chat(history, persona: _persona);
-    if (!mounted || reply.startsWith('❌') || reply.startsWith('⚠️')) return;
-
-    _lastUserMessage = DateTime.now(); // Reset so we don't spam
-    setState(() {
-      _messages.add(ChatMessage(text: reply, isUser: false));
-    });
-    _scrollDown();
-    _ai.saveToMemory('assistant', reply, persona: _persona.type.name);
-    setState(() => _speaking = true);
-    await _tts.speak(reply, _persona.type);
-    if (mounted) setState(() => _speaking = false);
-  }
+  // Proactive spam removed — JARVIS only talks when spoken to
 
   @override
   void dispose() {
     _emotion.stop();
     _controller.dispose();
     _scroll.dispose();
-    _proactiveTimer?.cancel();
-    _voice.stopWakeWordMode();
+_voice.stopWakeWordMode();
     _voice.dispose();
     _tts.dispose();
     super.dispose();
@@ -212,6 +130,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty && !hasImage) return;
     if (_loading) return;
     _controller.clear();
+    // Show HUD only when user asks something
+    OverlayService.hudShow();
+    OverlayService.hudStatus('PROCESSING...');
 
     // ── Проверяем команду открытия приложения ПЕРЕД AI ──
     if (!hasImage && text.isNotEmpty) {
@@ -225,6 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollDown();
         OverlayService.hudStatus('J.A.R.V.I.S. RESPONDING');
         await _tts.speak(launchResult, _persona.type);
+        OverlayService.hudHide();
         return;
       }
     }
@@ -241,6 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollDown();
         OverlayService.hudStatus('ACTION COMPLETE');
         await _tts.speak(phoneResult, _persona.type);
+        OverlayService.hudHide();
         return;
       }
     }
@@ -256,6 +179,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _scrollDown();
         await _tts.speak(searchResult, _persona.type);
+        OverlayService.hudHide();
         return;
       }
     }
@@ -320,6 +244,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _speaking = true);
     await _tts.speak(reply, _persona.type);
     if (mounted) setState(() => _speaking = false);
+    OverlayService.hudHide();
   }
 
   Future<void> _toggleVoice() async {
