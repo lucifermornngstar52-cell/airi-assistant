@@ -47,7 +47,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
       SnackBar(
         content: Text(msg),
         backgroundColor: isError ? Colors.red.shade800 : Colors.green.shade800,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -58,7 +58,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
       return Scaffold(
         backgroundColor: AppTheme.bgColor,
         appBar: AppBar(
-          title: const Text('Выбор модели'),
+          title: Text('Выбор модели'),
           backgroundColor: AppTheme.cardColor,
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -68,18 +68,18 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('Выбор модели'),
+        title: Text('Выбор модели'),
         backgroundColor: AppTheme.cardColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download),
+            icon: Icon(Icons.file_download),
             tooltip: 'Загрузить свою модель',
             onPressed: _importModel,
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         children: [
           // ─── Встроенные модели ─────────────────────────
           Text(
@@ -90,7 +90,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           ..._models.builtinModels.map((m) => _ModelCard(
             model: m,
             isSelected: _models.currentPath == m.assetPath,
@@ -101,7 +101,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
             },
           )),
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // ─── Кастомные модели ──────────────────────────
           Row(
@@ -117,16 +117,16 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
               const Spacer(),
               TextButton.icon(
                 onPressed: _importModel,
-                icon: const Icon(Icons.add),
-                label: const Text('Загрузить'),
+                icon: Icon(Icons.add),
+                label: Text('Загрузить'),
                 style: TextButton.styleFrom(foregroundColor: AppTheme.accentBlue),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           if (_models.customModels.isEmpty)
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.cardColor,
                 borderRadius: BorderRadius.circular(12),
@@ -135,12 +135,12 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
               child: Column(
                 children: [
                   Icon(Icons.folder_open, size: 48, color: Colors.grey.shade600),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Text(
                     'Нет кастомных моделей',
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     'Нажми «Загрузить» и выбери .model3.json файл',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
@@ -169,9 +169,9 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
             }),
 
           if (_error != null) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.red.shade900.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(8),
@@ -184,10 +184,10 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
             ),
           ],
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           // ─── Подсказка ─────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppTheme.cardColor,
               borderRadius: BorderRadius.circular(8),
@@ -196,7 +196,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
             child: Row(
               children: [
                 Icon(Icons.info_outline, size: 18, color: Colors.grey.shade500),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Поддерживаются Live2D .model3.json файлы. Все текстуры и .moc3 файлы копируются автоматически.',
@@ -231,7 +231,7 @@ class _ModelCard extends StatelessWidget {
       color: isSelected
           ? AppTheme.accentBlue.withOpacity(0.15)
           : AppTheme.cardColor,
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -240,7 +240,7 @@ class _ModelCard extends StatelessWidget {
         ),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           width: 48,
           height: 48,
@@ -273,7 +273,7 @@ class _ModelCard extends StatelessWidget {
             if (isSelected)
               Icon(Icons.check_circle, color: AppTheme.accentBlue, size: 22),
             if (!model.isBuiltin && onDelete != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               IconButton(
                 icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
                 onPressed: onDelete,
