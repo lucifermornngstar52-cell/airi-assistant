@@ -85,7 +85,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
           Text(
             'Встроенные модели',
             style: TextStyle(
-              color: AppTheme.accentColor,
+              color: AppTheme.accentBlue,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -109,7 +109,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
               Text(
                 'Мои модели',
                 style: TextStyle(
-                  color: AppTheme.accentColor,
+                  color: AppTheme.accentBlue,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -119,7 +119,7 @@ class _ModelSelectionScreenState extends State<ModelSelectionScreen> {
                 onPressed: _importModel,
                 icon: const Icon(Icons.add),
                 label: const Text('Загрузить'),
-                style: TextButton.styleFrom(foregroundColor: AppTheme.accentColor),
+                style: TextButton.styleFrom(foregroundColor: AppTheme.accentBlue),
               ),
             ],
           ),
@@ -229,13 +229,13 @@ class _ModelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       color: isSelected
-          ? AppTheme.accentColor.withOpacity(0.15)
+          ? AppTheme.accentBlue.withOpacity(0.15)
           : AppTheme.cardColor,
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected ? AppTheme.accentColor : Colors.transparent,
+          color: isSelected ? AppTheme.accentBlue : Colors.transparent,
           width: 2,
         ),
       ),
@@ -246,13 +246,13 @@ class _ModelCard extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             color: isSelected
-                ? AppTheme.accentColor.withOpacity(0.3)
+                ? AppTheme.accentBlue.withOpacity(0.3)
                 : Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             model.isBuiltin ? Icons.face : Icons.person_add,
-            color: isSelected ? AppTheme.accentColor : Colors.grey.shade400,
+            color: isSelected ? AppTheme.accentBlue : Colors.grey.shade400,
           ),
         ),
         title: Text(
@@ -271,7 +271,7 @@ class _ModelCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isSelected)
-              Icon(Icons.check_circle, color: AppTheme.accentColor, size: 22),
+              Icon(Icons.check_circle, color: AppTheme.accentBlue, size: 22),
             if (!model.isBuiltin && onDelete != null) ...[
               const SizedBox(width: 8),
               IconButton(
