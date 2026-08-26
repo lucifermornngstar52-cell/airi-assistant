@@ -503,6 +503,8 @@ class _Live2DSettingsScreenState extends State<Live2DSettingsScreen> {
                   Text('Модель плавает поверх всех приложений',
                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
         const SizedBox(height: 4),
+                ],
+              )),
         // ─── Выбор модели ─────────────────────────────────────
         ListTile(
           leading: const Icon(Icons.face_retouching_natural, color: Colors.blueAccent),
@@ -515,8 +517,6 @@ class _Live2DSettingsScreenState extends State<Live2DSettingsScreen> {
             ));
           },
         ),
-                ],
-              )),
             ]),
           ),
           const SizedBox(height: 20),
