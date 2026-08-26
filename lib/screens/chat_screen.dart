@@ -44,6 +44,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _emotion = EmotionService();
   String? _userEmotion;
   bool _emotionWatching = false;
+  bool _wakeWordActive = false;
   String? _emotionError;
   File? _pendingImage;
   final _overlay = OverlayService();
@@ -55,6 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _loadPersona();
     _initEmotionWatcher();
     _initMemory();
+    _initWakeWord();
   }
 
   Future<void> _initMemory() async {
@@ -76,11 +78,30 @@ class _ChatScreenState extends State<ChatScreen> {
     };
   }
 
+  void _initWakeWord() {
+    _voice.onWakeWordDetected = () {
+      debugPrint('[Chat] Wake word detected!');
+      if (!mounted) return;
+      setState(() => _wakeWordActive = true);
+      // Auto-start listening after wake word
+      _toggleVoice();
+    };
+    // Start wake word mode after a short delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _voice.startWakeWordMode().then((ok) {
+          if (ok && mounted) setState(() => _wakeWordActive = true);
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _emotion.stop();
     _controller.dispose();
     _scroll.dispose();
+    _voice.stopWakeWordMode();
     _voice.dispose();
     _tts.dispose();
     super.dispose();
