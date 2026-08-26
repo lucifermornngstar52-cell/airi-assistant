@@ -210,6 +210,14 @@ class OverlayService {
     try { await _hudChannel.invokeMethod("showHud"); } catch (_) {}
   }
 
+  static Future<void> hudShow() async {
+    try { await _hudChannel.invokeMethod("showHud"); } catch (_) {}
+  }
+
+  static Future<void> hudHide() async {
+    try { await _hudChannel.invokeMethod("hideHud"); } catch (_) {}
+  }
+
   static Future<void> hideHud() async {
     try { await _hudChannel.invokeMethod("hideHud"); } catch (_) {}
   }
