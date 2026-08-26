@@ -209,6 +209,8 @@ class JarvisHudService : Service() {
         private var bgAlpha: Float = 0.9f
         private var glitchOffset: Float = 0f
         private var glitchTimer: Int = 0
+        private var telemetry: DeviceMonitor.Telemetry? = null
+        private var telemetryTick: Int = 0
 
         private val rnd = Random(System.currentTimeMillis())
         private var dataTick: Int = 0
@@ -344,6 +346,12 @@ class JarvisHudService : Service() {
                 }
 
                 dataTick++
+                // Update device telemetry every ~2 seconds
+                telemetryTick++
+                if (telemetryTick >= 120) {
+                    telemetryTick = 0
+                    try { telemetry = DeviceMonitor.getTelemetry(context) } catch (_: Exception) {}
+                }
                 invalidate()
                 frameHandler.postDelayed(this, 16)
             }
@@ -564,8 +572,16 @@ class JarvisHudService : Service() {
             }
 
             // Status bars
+            val t = telemetry
             val labels = arrayOf("PWR", "CPU", "MEM", "NET", "GPU", "BIO")
-            val values = arrayOf(0.87f, 0.42f + 0.15f * sin(dataTick * 0.05f), 0.63f, 0.91f + 0.05f * sin(dataTick * 0.03f), 0.55f + 0.1f * sin(dataTick * 0.07f), 0.98f)
+            val values = if (t != null) arrayOf(
+                t.batteryLevel / 100f,
+                t.cpuUsage,
+                t.ramUsed,
+                0.91f + 0.05f * sin(dataTick * 0.03f),
+                (t.gpuTemp / 100f).coerceIn(0f, 1f),
+                0.98f
+            ) else arrayOf(0.87f, 0.42f + 0.15f * sin(dataTick * 0.05f), 0.63f, 0.91f + 0.05f * sin(dataTick * 0.03f), 0.55f + 0.1f * sin(dataTick * 0.07f), 0.98f)
             val barW2 = 70 * d
             val barH2 = 3 * d
             for (i in labels.indices) {
@@ -587,6 +603,27 @@ class JarvisHudService : Service() {
                 pTextCyan.alpha = (150 * bgAlpha).toInt()
                 val pct = "${(values[i] * 100).toInt()}%"
                 c.drawText(pct, x + 28 * d + barW2 + 3 * d, y, pTextCyan)
+            }
+
+            // Real temperature readouts
+            if (t != null) {
+                pTextMagenta.textSize = 5.5f * d
+                pTextMagenta.alpha = (180 * bgAlpha).toInt()
+                val tempY = y0 + 55 * d + labels.size * lineH + 4 * d
+                c.drawText("CPU ${t.cpuTemp.toInt()}C", x, tempY, pTextMagenta)
+                c.drawText("GPU ${t.gpuTemp.toInt()}C", x + 50 * d, tempY, pTextMagenta)
+                c.drawText("BAT ${t.batteryTemp.toInt()}C", x + 100 * d, tempY, pTextMagenta)
+                
+                pTextCyan.textSize = 5f * d
+                pTextCyan.alpha = (150 * bgAlpha).toInt()
+                c.drawText("RAM ${t.ramTotal}MB", x, tempY + 10 * d, pTextCyan)
+                c.drawText("CORES ${t.availableCores}", x + 60 * d, tempY + 10 * d, pTextCyan)
+                c.drawText("UP ${"%.1f".format(t.uptimeHours)}h", x + 110 * d, tempY + 10 * d, pTextCyan)
+                
+                if (t.isCharging) {
+                    pTextMagenta.alpha = (200 * bgAlpha).toInt()
+                    c.drawText("[CHG]", x + 160 * d, tempY + 10 * d, pTextMagenta)
+                }
             }
         }
 
@@ -636,7 +673,15 @@ class JarvisHudService : Service() {
 
             // Data lines
             val lineH = 12 * d
-            val data = arrayOf("ALT 412M", "SPD 0.3K", "TMP 36.6C", "SIG 98%", "ENC AES-256", "VPN ACTIVE")
+            val t = telemetry
+            val data = if (t != null) arrayOf(
+                "CPU ${t.cpuTemp.toInt()}C",
+                "GPU ${t.gpuTemp.toInt()}C",
+                "BAT ${t.batteryTemp.toInt()}C",
+                "BAT ${t.batteryLevel}%",
+                "RAM ${(t.ramUsed * 100).toInt()}%",
+                "CPU ${(t.cpuUsage * 100).toInt()}%"
+            ) else arrayOf("ALT 412M", "SPD 0.3K", "TMP 36.6C", "SIG 98%", "ENC AES-256", "VPN ACTIVE")
             for (i in data.indices) {
                 val y = cy + r1 + 10 * d + i * lineH
                 pTextCyan.textSize = 5.5f * d
