@@ -5,8 +5,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'vision_service.dart';
 
-/// EmotionService — НЕПРЕРЫВНОЕ отслеживание эмоций через image stream.
-/// Камера работает постоянно, кадры анализируются каждые ~1.5 секунды.
+/// EmotionService — НЕПРЕРЫВНОЕ отслеживание эмоций.
+/// Камера работает постоянно, снимает кадры каждые 1.5 секунды.
+/// Без периодических пауз — реально постоянное наблюдение.
 class EmotionService {
   static final EmotionService _instance = EmotionService._();
   factory EmotionService() => _instance;
@@ -16,14 +17,12 @@ class EmotionService {
   bool _active = false;
   CameraController? _camController;
   bool _camReady = false;
+  bool _analyzing = false;
 
   String? _lastEmotion;
   String? get lastEmotion => _lastEmotion;
 
-  // Continuous stream tracking
-  int _frameCount = 0;
-  DateTime? _lastAnalyzeTime;
-  static const _analyzeInterval = Duration(milliseconds: 1200);
+  Timer? _captureTimer;
 
   void Function(String emotion)? onEmotionDetected;
   void Function(String error)? onEmotionError;
@@ -34,6 +33,8 @@ class EmotionService {
     _active = true;
     debugPrint('[Emotion] непрерывное наблюдение запущено');
     await _initCamera();
+    // Start continuous capture loop — every 1.5 seconds
+    _captureTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) => _captureAndAnalyze());
   }
 
   Future<void> _initCamera() async {
@@ -53,108 +54,53 @@ class EmotionService {
 
       await _camController!.initialize();
       _camReady = true;
-      debugPrint('[Emotion] камера готова, запускаем image stream');
-
-      // Start continuous image stream
-      await _camController!.startImageStream(_onImage);
+      debugPrint('[Emotion] камера готова — непрерывный режим');
     } catch (e) {
       debugPrint('[Emotion] ошибка инициализации камеры: $e');
       _camReady = false;
+      onEmotionError?.call('Не удалось инициализировать камеру');
     }
   }
 
-  void _onImage(CameraImage image) {
-    if (!_active) return;
+  void _captureAndAnalyze() async {
+    if (!_active || !_camReady || _camController == null || _analyzing) return;
 
-    _frameCount++;
-    _lastAnalyzeTime ??= DateTime.now();
-
-    final now = DateTime.now();
-    if (now.difference(_lastAnalyzeTime!) < _analyzeInterval) return;
-    _lastAnalyzeTime = now;
-
-    // Convert YUV frame to JPEG bytes and analyze
-    _analyzeFrame(image);
-  }
-
-  Future<void> _analyzeFrame(CameraImage image) async {
+    _analyzing = true;
     try {
-      // Convert CameraImage (YUV420) to JPEG
-      final jpegBytes = _convertYUVtoJPEG(image);
-      if (jpegBytes == null) return;
+      final xfile = await _camController!.takePicture();
+      final photo = File(xfile.path);
 
-      // Write to temp file for vision API
-      final tempFile = File('${Directory.systemTemp.path}/emotion_frame.jpg');
-      await tempFile.writeAsBytes(jpegBytes);
+      onEmotionScan?.call();
 
-      final emotion = await _vision.analyzeEmotion(tempFile);
+      final emotion = await _vision.analyzeEmotion(photo);
 
       if (emotion != null) {
-        debugPrint('[Emotion] результат: $emotion (frame #$_frameCount)');
+        debugPrint('[Emotion] результат: $emotion');
         if (emotion != _lastEmotion) {
           _lastEmotion = emotion;
           onEmotionDetected?.call(emotion);
         }
-        onEmotionScan?.call();
       }
 
-      try { await tempFile.delete(); } catch (_) {}
+      try { await photo.delete(); } catch (_) {}
     } catch (e) {
-      debugPrint('[Emotion] ошибка анализа кадра: $e');
-    }
-  }
-
-  /// Convert CameraImage (YUV420 format) to JPEG bytes
-  Uint8List? _convertYUVtoJPEG(CameraImage image) {
-    try {
-      final width = image.width;
-      final height = image.height;
-
-      // Get Y, U, V planes
-      final yPlane = image.planes[0];
-      final uPlane = image.planes[1];
-      final vPlane = image.planes[2];
-
-      // Create a simple JPEG from Y plane only (grayscale for emotion detection)
-      // This is fast and sufficient for emotion analysis
-      final yBytes = yPlane.bytes;
-
-      // Build minimal JPEG header + Y data
-      // For proper color we'd need full YUV->RGB->JPEG, but grayscale works for faces
-      // Use the platform's built-in conversion via temp approach
-      // Actually, let's use the raw bytes directly with a simpler approach
-
-      // Fast path: just use Y plane as grayscale image
-      final buffer = Uint8List(width * height);
-      for (int i = 0; i < buffer.length; i++) {
-        buffer[i] = yBytes[i];
-      }
-
-      // Create JPEG from grayscale using image package would be ideal
-      // But to avoid dependency, let's return raw Y and let vision handle it
-      // Actually we need proper JPEG — use a different approach
-      return null; // Will fallback to takePicture approach
-    } catch (e) {
-      debugPrint('[Emotion] YUV conversion error: $e');
-      return null;
+      debugPrint('[Emotion] ошибка захвата: $e');
+    } finally {
+      _analyzing = false;
     }
   }
 
   void stop() {
     _active = false;
+    _captureTimer?.cancel();
+    _captureTimer = null;
     if (_camController != null) {
-      try {
-        if (_camController!.value.isStreamingImages) {
-          _camController!.stopImageStream();
-        }
-      } catch (_) {}
       _camController!.dispose();
       _camController = null;
     }
     _camReady = false;
     _lastEmotion = null;
-    _frameCount = 0;
-    _lastAnalyzeTime = null;
+    _analyzing = false;
     debugPrint('[Emotion] наблюдение остановлено');
   }
 
