@@ -58,91 +58,22 @@ class SettingsScreen extends StatelessWidget {
         screen = const ProvidersScreen();
         break;
       case '/modules/voice':
-        screen = const _ModuleDetailScreen(
-          title: 'Голосовой ввод',
-          icon: Icons.mic_none,
-          items: [
-            ('Распознавание речи', 'SpeechToText (speech_to_text)'),
-            ('Язык', 'ru-RU (без fallback)'),
-            ('Режим', 'Dictation — фиксация фразы целиком'),
-            ('Пауза', '2 сек после последнего слова'),
-            ('Таймаут', '20 сек макс'),
-            ('Авто-retry', 'Повтор при временной ошибке (до 3 попыток)'),
-            ('Частичные результаты', 'Включены — текст в реальном времени'),
-          ],
-        );
+        screen = const _VoiceTestScreen();
         break;
       case '/modules/tts':
-        screen = const _ModuleDetailScreen(
-          title: 'Синтез речи',
-          icon: Icons.record_voice_over,
-          items: [
-            ('Движок', 'FlutterTTS (flutter_tts)'),
-            ('Язык', 'ru-RU'),
-            ('Персонажей', '2 (JARVIS и Airi)'),
-            ('JARVIS', 'Speed 0.48, Pitch 0.85'),
-            ('Airi', 'Speed 0.44, Pitch 1.1'),
-            ('Очистка текста', 'Markdown stripping перед TTS'),
-          ],
-        );
+        screen = const _TtsTestScreen();
         break;
       case '/modules/chat':
-        screen = const _ModuleDetailScreen(
-          title: 'Чат с AI',
-          icon: Icons.chat_bubble_outline,
-          items: [
-            ('Провайдер', 'OpenAI API'),
-            ('Модель', 'gpt-5'),
-            ('Max tokens', '1000'),
-            ('Temperature', '0.85'),
-            ('Персонажи', 'JARVIS / Airi — разные промпты'),
-            ('Сохранение ключа', 'SharedPreferences (локально)'),
-          ],
-        );
+        screen = const _ChatInfoScreen();
         break;
       case '/modules/vision':
-        screen = const _ModuleDetailScreen(
-          title: 'Зрение (Vision)',
-          icon: Icons.visibility_outlined,
-          items: [
-            ('Источник', 'Камера (image_picker)'),
-            ('Движок', 'GPT-5 Vision API'),
-            ('Размер фото', '1024x1024, качество 85%'),
-            ('Формат', 'JPEG / PNG -> base64'),
-            ('Макс. токенов', '800'),
-            ('Промпт', 'Описание фото или ответ на вопрос'),
-          ],
-        );
+        screen = const _VisionTestScreen();
         break;
       case '/modules/emotion':
-        screen = const _ModuleDetailScreen(
-          title: 'Анализ эмоций',
-          icon: Icons.face_retouching_natural_outlined,
-          items: [
-            ('Камера', 'Фронтальная (CameraDevice.front)'),
-            ('Интервал', 'Каждые 20 секунд'),
-            ('Первая проверка', 'Через 8 сек после запуска'),
-            ('Движок', 'GPT-5 Vision API'),
-            ('Max tokens', '50 (короткий ответ)'),
-            ('Интеграция', 'Эмоция влияет на тон ответа AI'),
-            ('Размер фото', '768x768, качество 75%'),
-          ],
-        );
+        screen = const _EmotionTestScreen();
         break;
       case '/memory':
-        screen = const _ModuleDetailScreen(
-          title: 'Память',
-          icon: Icons.memory_outlined,
-          items: [
-            ('Хранилище', 'SQLite (sqflite) — локально на устройстве'),
-            ('База данных', 'airi_memory.db'),
-            ('Таблицы', 'messages, facts, sessions'),
-            ('Контекст', 'Последние 20 сообщений в system prompt'),
-            ('Факты', 'Имя, работа, город, возраст — автоизвлечение'),
-            ('Загрузка', 'История восстанавливается при открытии чата'),
-            ('Синхронизация', 'Локально, без облака'),
-          ],
-        );
+        screen = const _MemoryViewScreen();
         break;
       case '/models':
         screen = const Live2DSettingsScreen();
@@ -160,76 +91,22 @@ class SettingsScreen extends StatelessWidget {
         screen = const MoodDiaryScreen();
         break;
       case '/ext/websearch':
-        screen = const _ModuleDetailScreen(
-          title: 'Веб-поиск',
-          icon: Icons.search,
-          items: [
-            ('Движок', 'GPT-5 + web search tool'),
-            ('Запросы', 'Через чат — "найди в интернете..."'),
-            ('Результаты', 'Краткая выжимка + ссылки'),
-            ('Интеграция', 'Автоматически при вопросах о фактах'),
-          ],
-        );
+        screen = const _WebSearchInfoScreen();
         break;
       case '/ext/news':
-        screen = const _ModuleDetailScreen(
-          title: 'Новости',
-          icon: Icons.article_outlined,
-          items: [
-            ('Источник', 'RSS-ленты + API'),
-            ('Категории', 'Технологии, мир, спорт, экономика'),
-            ('Запрос', 'Через чат — "что нового?" или "новости"'),
-            ('Формат', 'Краткая выжимка топ-5 новостей'),
-          ],
-        );
+        screen = const _NewsScreen();
         break;
       case '/ext/reminders':
-        screen = const _ModuleDetailScreen(
-          title: 'Напоминания',
-          icon: Icons.notifications_outlined,
-          items: [
-            ('Хранилище', 'Локально (SharedPreferences)'),
-            ('Уведомления', 'Локальные push-уведомления'),
-            ('Запрос', 'Через чат — "напомни мне..."'),
-            ('Повтор', 'Однократные и повторяющиеся'),
-          ],
-        );
+        screen = const _RemindersScreen();
         break;
       case '/ext/shoplist':
-        screen = const _ModuleDetailScreen(
-          title: 'Список покупок',
-          icon: Icons.shopping_cart_outlined,
-          items: [
-            ('Хранилище', 'Локально (SharedPreferences)'),
-            ('Категории', 'Продукты, быт, прочее'),
-            ('Запрос', 'Через чат — "добавь в список покупок..."'),
-            ('Голос', 'Добавление голосом через STT'),
-          ],
-        );
+        screen = const _ShopListScreen();
         break;
       case '/ext/personality':
-        screen = const _ModuleDetailScreen(
-          title: 'Личность AI',
-          icon: Icons.psychology_outlined,
-          items: [
-            ('Модель', 'PersonalityService — эволюция характера'),
-            ('Персонажи', 'Aika и Gabimaru — разные личности'),
-            ('Параметры', 'Усталость, история, время суток'),
-            ('Влияние', 'Тон и стиль ответа меняются динамически'),
-            ('Память', 'Запоминание взаимодействий'),
-          ],
-        );
+        screen = const _PersonalityScreen();
         break;
       case '/ext/clipboard':
-        screen = const _ModuleDetailScreen(
-          title: 'Буфер обмена',
-          icon: Icons.content_copy,
-          items: [
-            ('Функция', 'Чтение и запись буфера обмена'),
-            ('Запрос', 'Через чат — "скопируй" или "вставь"'),
-            ('Интеграция', 'AI может копировать текст для пользователя'),
-          ],
-        );
+        screen = const _ClipboardScreen();
         break;
       case '/scenes':
         screen = const ScenesScreen();
