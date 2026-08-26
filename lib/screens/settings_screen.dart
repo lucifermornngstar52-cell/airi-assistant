@@ -58,6 +58,9 @@ class SettingsScreen extends StatelessWidget {
       case '/providers':
         screen = const ProvidersScreen();
         break;
+      case '/modules/voicecontrol':
+        screen = const VoiceControlScreen();
+        break;
       case '/modules/voice':
         screen = const VoiceTestScreen();
         break;
