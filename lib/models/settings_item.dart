@@ -17,7 +17,15 @@ class SettingsItem {
 }
 
 const settingsItems = [
-  // ── Активные модули ──────────────────────────────────────────
+  // ── Активные модули ────
+  SettingsItem(
+    title: 'Голосовое управление',
+    subtitle: 'Wake word • команды • управление телефоном',
+    icon: Icons.record_voice_over,
+    route: '/modules/voicecontrol',
+    badge: 'active',
+  ),
+──────────────────────────────────────
   SettingsItem(
     title: 'Чат с AI',
     subtitle: 'GPT-5 • распознавание изображений',
