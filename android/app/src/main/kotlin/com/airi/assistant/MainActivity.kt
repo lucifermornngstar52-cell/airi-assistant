@@ -16,6 +16,57 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // JARVIS HUD: auto-start
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+            try {
+                val hudIntent = Intent(this, JarvisHudService::class.java)
+                    .setAction(JarvisHudService.ACTION_SHOW)
+                ContextCompat.startForegroundService(this, hudIntent)
+            } catch (_: Throwable) {}
+        }
+
+        // JARVIS HUD channel from Flutter
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/hud").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "showHud" -> {
+                    try {
+                        val i = Intent(this, JarvisHudService::class.java)
+                            .setAction(JarvisHudService.ACTION_SHOW)
+                        ContextCompat.startForegroundService(this, i)
+                        result.success(true)
+                    } catch (_: Throwable) { result.success(false) }
+                }
+                "hideHud" -> {
+                    try {
+                        val i = Intent(this, JarvisHudService::class.java)
+                            .setAction(JarvisHudService.ACTION_HIDE)
+                        startService(i)
+                        result.success(true)
+                    } catch (_: Throwable) { result.success(false) }
+                }
+                "hudTarget" -> {
+                    val x = (call.argument<Number>("x") ?: 0f).toFloat()
+                    val y = (call.argument<Number>("y") ?: 0f).toFloat()
+                    JarvisHudService.showTarget(x, y)
+                    result.success(true)
+                }
+                "hudStatus" -> {
+                    val text = call.argument<String>("text") ?: ""
+                    JarvisHudService.showStatus(text)
+                    result.success(true)
+                }
+                "hudPulse" -> {
+                    try {
+                        val i = Intent(this, JarvisHudService::class.java)
+                            .setAction(JarvisHudService.ACTION_PULSE)
+                        startService(i)
+                        result.success(true)
+                    } catch (_: Throwable) { result.success(false) }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.airi.assistant/overlay").setMethodCallHandler { call, result ->
             when (call.method) {
                 "hasPermission" -> {
