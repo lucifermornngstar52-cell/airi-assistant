@@ -202,4 +202,28 @@ class OverlayService {
     }
   }
 
+
+  // JARVIS HUD methods
+  static const _hudChannel = MethodChannel("com.airi.assistant/hud");
+
+  static Future<void> showHud() async {
+    try { await _hudChannel.invokeMethod("showHud"); } catch (_) {}
+  }
+
+  static Future<void> hideHud() async {
+    try { await _hudChannel.invokeMethod("hideHud"); } catch (_) {}
+  }
+
+  static Future<void> hudTarget(double x, double y) async {
+    try { await _hudChannel.invokeMethod("hudTarget", {"x": x, "y": y}); } catch (_) {}
+  }
+
+  static Future<void> hudStatus(String text) async {
+    try { await _hudChannel.invokeMethod("hudStatus", {"text": text}); } catch (_) {}
+  }
+
+  static Future<void> hudPulse() async {
+    try { await _hudChannel.invokeMethod("hudPulse"); } catch (_) {}
+  }
+
 }
