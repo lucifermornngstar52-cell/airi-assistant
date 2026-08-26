@@ -12,6 +12,10 @@ class VoiceService {
   int _errorCount = 0;
   Timer? _retryTimer;
 
+  // Callbacks for normal listening
+  void Function(String)? _lastOnResult;
+  void Function(String)? _lastOnPartial;
+
   // ── Wake word detection ──
   bool _wakeWordMode = false;
   Timer? _wakeRestartTimer;
