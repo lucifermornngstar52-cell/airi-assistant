@@ -45,18 +45,18 @@ class JarvisHudService : Service() {
         const val CHANNEL_ID = "jarvis_hud"
         const val NOTIF_ID = 7771
 
-        // ── CYBERPUNK NEON PALETTE ──
-        const val COL_CYAN      = 0xFF00FFF0.toInt()   // electric cyan
-        const val COL_CYAN_BR   = 0xFF00FFAA.toInt()   // bright neon green-cyan
-        const val COL_MAGENTA   = 0xFFFF00FF.toInt()   // neon magenta
-        const val COL_PINK      = 0xFFFF0088.toInt()   // hot pink
-        const val COL_PURPLE    = 0xFFAA00FF.toInt()   // electric purple
-        const val COL_YELLOW    = 0xFFFFFF00.toInt()   // neon yellow
-        const val COL_RED       = 0xFFFF0044.toInt()   // neon red
-        const val COL_WHITE     = 0xFFE0FFFF.toInt()   // icy white
-        const val COL_DIM_CYAN  = 0x3300FFF0.toInt()   // dim cyan
-        const val COL_DIM_MAG   = 0x33FF00FF.toInt()   // dim magenta
-        const val COL_GRID      = 0x1A00FFF0.toInt()   // very dim grid
+        // ── MUTED BLUE-TEAL-GREEN PALETTE ──
+        const val COL_CYAN      = 0xFF00AABB.toInt()   // soft blue-teal
+        const val COL_CYAN_BR   = 0xFF00BB99.toInt()   // teal-green
+        const val COL_MAGENTA   = 0xFF0088AA.toInt()   // dim blue (replaces magenta)
+        const val COL_PINK      = 0xFF0099AA.toInt()   // blue-teal (replaces pink)
+        const val COL_PURPLE    = 0xFF006699.toInt()   // deeper blue (replaces purple)
+        const val COL_YELLOW    = 0xFF00CCAA.toInt()   // green-teal (replaces yellow)
+        const val COL_RED       = 0xFF006688.toInt()   // muted dark teal (replaces red)
+        const val COL_WHITE     = 0xFFB0DDDD.toInt()   // soft blue-white
+        const val COL_DIM_CYAN  = 0x2200AABB.toInt()   // dim teal
+        const val COL_DIM_MAG   = 0x220088AA.toInt()   // dim blue
+        const val COL_GRID      = 0x1000AABB.toInt()   // very dim grid
 
         @Volatile private var instance: JarvisHudService? = null
         fun showTarget(x: Float, y: Float) {
@@ -261,6 +261,7 @@ class JarvisHudService : Service() {
         private val pFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val pText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COL_WHITE; textSize = 8f * d; isFakeBoldText = true; letterSpacing = 0.15f
+            alpha = 200
         }
         private val pTextCyan = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = COL_CYAN_BR; textSize = 6.5f * d; letterSpacing = 0.1f
