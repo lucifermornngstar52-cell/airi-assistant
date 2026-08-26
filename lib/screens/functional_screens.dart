@@ -1040,3 +1040,180 @@ class WebSearchInfoScreen extends StatelessWidget {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// VOICE CONTROL SCREEN — full voice command reference + test
+// ═══════════════════════════════════════════════════════
+class VoiceControlScreen extends StatefulWidget {
+  const VoiceControlScreen();
+  @override State<VoiceControlScreen> createState() => _VoiceControlScreenState();
+}
+
+class _VoiceControlScreenState extends State<VoiceControlScreen> {
+  final _voice = VoiceService();
+  bool _wakeActive = false;
+  String _heard = '';
+  bool _listening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _wakeActive = _voice.isWakeWordMode;
+    _voice.onWakeWordDetected = () {
+      if (mounted) setState(() => _wakeActive = true);
+    };
+  }
+
+  @override
+  void dispose() {
+    _voice.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleWakeWord() async {
+    if (_wakeActive) {
+      _voice.stopWakeWordMode();
+      setState(() => _wakeActive = false);
+    } else {
+      final ok = await _voice.startWakeWordMode();
+      if (mounted) setState(() => _wakeActive = ok);
+    }
+  }
+
+  Future<void> _testVoice() async {
+    if (_listening) {
+      await _voice.stopListening();
+      setState(() => _listening = false);
+      return;
+    }
+    setState(() { _listening = true; _heard = ''; });
+    final ok = await _voice.startListening(
+      onResult: (text) {
+        if (mounted) setState(() { _heard = text; _listening = false; });
+      },
+      onPartial: (text) {
+        if (mounted) setState(() => _heard = text);
+      },
+    );
+    if (!ok && mounted) setState(() => _listening = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bgColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.bgColor, elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppTheme.textPrimary, size: 20),
+          onPressed: () => Navigator.pop(context)),
+        title: const Text('Голосовое управление', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+      ),
+      body: ListView(padding: const EdgeInsets.all(20),
+        children: [
+          // Wake word status
+          Card(
+            color: AppTheme.cardColor,
+            child: SwitchListTile(
+              title: const Text('Wake word (Джарвис)', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+              subtitle: Text(_wakeActive ? 'Активен — скажите "Джарвис" для активации' : 'Выключен',
+                style: TextStyle(color: _wakeActive ? Colors.green : AppTheme.textSecondary, fontSize: 13)),
+              value: _wakeActive, onChanged: (_) => _toggleWakeWord(),
+              activeColor: AppTheme.accentBlue,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Test voice input
+          Card(
+            color: AppTheme.cardColor,
+            child: Padding(padding: const EdgeInsets.all(20),
+              child: Column(children: [
+                Icon(_listening ? Icons.mic : Icons.mic_none, size: 50,
+                  color: _listening ? AppTheme.accentBlue : AppTheme.textSecondary),
+                const SizedBox(height: 12),
+                Text(_listening ? 'Слушаю...' : 'Нажмите и говорите',
+                  style: TextStyle(color: _listening ? AppTheme.accentBlue : AppTheme.textSecondary, fontSize: 15)),
+                const SizedBox(height: 8),
+                if (_heard.isNotEmpty)
+                  Text('Услышал: "$heard"', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _testVoice,
+                  icon: Icon(_listening ? Icons.stop : Icons.mic),
+                  label: Text(_listening ? 'Стоп' : 'Тест голоса'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _listening ? Colors.red : AppTheme.accentBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Command categories
+          const Text('Команды открытия приложений', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _cmdCard('открой телеграм', 'Открывает Telegram'),
+          _cmdCard('запусти whatsapp', 'Открывает WhatsApp'),
+          _cmdCard('включи youtube', 'Открывает YouTube'),
+          _cmdCard('открой браузер', 'Открывает браузер'),
+          _cmdCard('запусти музыку', 'Открывает музыкальный плеер'),
+
+          const SizedBox(height: 20),
+          const Text('Команды управления телефоном', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _cmdCard('назад', 'Кнопка назад'),
+          _cmdCard('домой', 'Кнопка домой'),
+          _cmdCard('недавние', 'Недавние приложения'),
+          _cmdCard('листай вниз', 'Прокрутка вниз'),
+          _cmdCard('листай вверх', 'Прокрутка вверх'),
+          _cmdCard('нажми Отправить', 'Нажать кнопку по тексту'),
+          _cmdCard('введи привет', 'Ввести текст в поле ввода'),
+
+          const SizedBox(height: 20),
+          const Text('Поиск и информация', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _cmdCard('найди в интернете ...', 'Веб-поиск через AI'),
+          _cmdCard('какая погода', 'Текущая погода'),
+          _cmdCard('курс валют', 'Курсы валют'),
+          _cmdCard('что нового', 'Новости'),
+
+          const SizedBox(height: 20),
+          const Text('Общение с JARVIS', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _cmdCard('Джарвис, ...', 'Активация wake word → вопрос'),
+          _cmdCard('расскажи о ...', 'AI отвечает в стиле JARVIS'),
+          _cmdCard('опиши что на фото', 'Анализ изображения'),
+
+          const SizedBox(height: 30),
+          Card(
+            color: AppTheme.cardColor,
+            child: Padding(padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                Text('Требования', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                SizedBox(height: 8),
+                Text('• Accessibility Service — для управления телефоном\n• Разрешение на микрофон\n• Разрешение на наложение поверх окон\n• Google App установлен (для STT)',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cmdCard(String command, String desc) {
+    return Card(
+      color: AppTheme.cardColor, margin: const EdgeInsets.only(bottom: 6),
+      child: ListTile(
+        leading: const Icon(Icons.keyboard_voice, color: AppTheme.accentBlue, size: 20),
+        title: Text(command, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Text(desc, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        dense: true,
+      ),
+    );
+  }
+}
