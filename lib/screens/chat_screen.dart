@@ -201,7 +201,7 @@ _voice.stopWakeWordMode();
     _scrollDown();
     // Сохраняем в память
     _ai.saveToMemory('user', text.isEmpty ? '[фото]' : text, persona: _persona.type.name);
-    _lastUserMessage = DateTime.now();
+    // _lastUserMessage removed
 
     final history = _messages
         .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
