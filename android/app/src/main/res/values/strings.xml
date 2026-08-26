@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">AIRI</string>
     <string name="accessibility_service_description">AIRI — голосовое управление и Iron Man HUD overlay. Требуется для тапов по координатам и анимации прицела JARVIS.</string>
+    <string name="accessibility_description">JARVIS HUD integration — allows tap targeting and hands-free control</string>
 </resources>
