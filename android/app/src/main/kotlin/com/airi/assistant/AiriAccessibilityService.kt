@@ -240,15 +240,7 @@ class AiriAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         Log.d(TAG, "Accessibility service connected — FULL CONTROL")
-        try {
-            val i = Intent(this, JarvisHudService::class.java)
-                .setAction(JarvisHudService.ACTION_SHOW)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(i)
-            } else {
-                startService(i)
-            }
-        } catch (_: Throwable) {}
+        // HUD is shown on demand from Flutter, not auto-started
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
