@@ -6,6 +6,7 @@ import '../widgets/settings_card.dart';
 import '../theme/app_theme.dart';
 import 'persona_screen.dart';
 import 'providers_screen.dart';
+import 'model_selection_screen.dart';
 import '../services/live2d_service.dart';
 import 'currency_screen.dart';
 import 'weather_screen.dart';
@@ -501,6 +502,19 @@ class _Live2DSettingsScreenState extends State<Live2DSettingsScreen> {
                   SizedBox(height: 4),
                   Text('Модель плавает поверх всех приложений',
                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        const SizedBox(height: 4),
+        // ─── Выбор модели ─────────────────────────────────────
+        ListTile(
+          leading: const Icon(Icons.face_retouching_natural, color: Colors.blueAccent),
+          title: const Text('Выбор модели'),
+          subtitle: const Text('Встроенные + свои модели'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(
+              builder: (_) => const ModelSelectionScreen(),
+            ));
+          },
+        ),
                 ],
               )),
             ]),
