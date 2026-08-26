@@ -1,7 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/character_persona.dart';
 import 'openai_tts_service.dart';
@@ -15,7 +12,6 @@ class TtsService {
 
   bool get isSpeaking => _speaking;
 
-  /// Инициализация локального TTS (для не-JARVIS персон)
   Future<void> _initLocal(PersonaType persona) async {
     if (!_initialized) {
       await _tts.setLanguage('ru-RU');
@@ -23,7 +19,6 @@ class TtsService {
       await _tts.setVolume(1.0);
       await _tts.setPitch(persona == PersonaType.jarvis ? 0.7 : 1.1);
 
-      // Для Jarvis ищем самый мужской голос в системе (фолбэк если нет OpenAI ключа)
       if (persona == PersonaType.jarvis) {
         try {
           final voices = await _tts.getVoices;
@@ -35,9 +30,6 @@ class TtsService {
                 if (name.contains('male') || name.contains('муж')) {
                   bestVoice = v.toString();
                   break;
-                }
-                if (bestVoice == null && (name.contains('male') || name.contains('-m') || name.contains('mru'))) {
-                  bestVoice = v.toString();
                 }
               }
             }
@@ -59,52 +51,51 @@ class TtsService {
     }
   }
 
-  /// Проверка — есть ли OpenAI ключ (для JARVIS TTS)
   Future<bool> _hasOpenAiKey() async {
     final prefs = await SharedPreferences.getInstance();
     return (prefs.getString('openai_key') ?? '').isNotEmpty;
   }
 
-  /// Произнести текст
-  /// JARVIS → OpenAI TTS (Onyx), остальные → FlutterTts (локальный)
+  /// Произнести текст.
+  /// JARVIS → OpenAI TTS (Onyx) с фолбэком на локальный TTS.
+  /// Остальные → локальный FlutterTts.
   Future<void> speak(String text, PersonaType persona) async {
     if (text.trim().isEmpty) return;
 
-    // Очищаем текст
     final clean = _clean(text);
     if (clean.isEmpty) return;
 
-    // Если уже говорит — останавливаем
     if (_speaking) await stop();
 
-    _speaking = true;
-
-    // ── JARVIS → OpenAI TTS с голосом Onyx ──────────────────────
+    // ── JARVIS → пытаемся OpenAI TTS ─────────────────────────
     if (persona == PersonaType.jarvis) {
       final hasKey = await _hasOpenAiKey();
       if (hasKey) {
         _usingOpenAi = true;
+        _speaking = true;
         try {
           await _openaiTts.init();
           _openaiTts.onSpeakingChanged = (speaking) {
             _speaking = speaking;
           };
           await _openaiTts.speak(clean);
-          return;
+          // Если OpenAI TTS начал говорить — выходим
+          if (_openaiTts.isSpeaking) return;
+          // Иначе — фолбэк на локальный
         } catch (_) {
-          // Если OpenAI TTS упал — фолбэк на локальный
-          _usingOpenAi = false;
+          // OpenAI TTS упал — фолбэк на локальный
         }
+        _usingOpenAi = false;
+        _speaking = false;
       }
     }
 
-    // ── Фолбэк / не-JARVIS → локальный FlutterTts ───────────────
+    // ── Локальный FlutterTts (фолбэк или не-JARVIS) ──────────
     _usingOpenAi = false;
     await _initLocal(persona);
     await _tts.speak(clean);
   }
 
-  /// Остановить
   Future<void> stop() async {
     _speaking = false;
     if (_usingOpenAi) {
@@ -114,7 +105,6 @@ class TtsService {
     }
   }
 
-  /// Очистка текста от markdown и лишних символов
   String _clean(String text) {
     return text
         .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'\1')
