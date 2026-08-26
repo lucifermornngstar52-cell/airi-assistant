@@ -298,8 +298,15 @@ class AiriOverlayService : Service() {
                 val path = intent.getStringExtra(EXTRA_MODEL_PATH) ?: return START_STICKY
                 handler.post {
                     webView?.alpha = 0f  // Скрываем перед переключением
-                    webView?.evaluateJavascript("window.switchModel('$path')", null)
-                    // onModelLoaded покажет оверлей снова
+                    // Маршрутизация: встроенная (assets/) → switchBuiltinModel,
+                    // кастомная (файловый путь) → loadCustomModel
+                    val jsCall = if (path.startsWith("assets/") || path.startsWith("/android_asset/")) {
+                        "window.switchBuiltinModel('$path')"
+                    } else {
+                        val fileUrl = if (path.startsWith("file://")) path else "file://$path"
+                        "window.loadCustomModel('$fileUrl')"
+                    }
+                    webView?.evaluateJavascript(jsCall, null)
                 }
             }
             ACTION_SET_MODE -> {
