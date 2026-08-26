@@ -174,18 +174,30 @@ class AiService {
   }
 
   Future<void> saveToMemory(String role, String content, {String? persona}) async {
-    await _memory.saveMessage(role, content, persona: persona);
+    await _memory.addMessage(role, content, persona: persona);
   }
 
   Future<List<Map<String, String>>> loadMemoryHistory({int limit = 15}) async {
-    return await _memory.getHistory(limit: limit);
+    return await _memory.getRecentMessages(limit: limit);
   }
 
   Future<void> extractFact(String text) async {
-    await _memory.extractFact(text);
+    // Simple fact extraction — in production, use GPT to extract
+    // For now, just store as a general note
+    await _memory.setFact('last_input', text);
   }
 
   Future<PersonaType> loadPersona() async {
-    return await _memory.loadPersona();
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('aika_persona') ?? 'jarvis';
+    return PersonaType.values.firstWhere(
+      (p) => p.name == name,
+      orElse: () => PersonaType.jarvis,
+    );
+  }
+
+  Future<void> savePersona(PersonaType type) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('aika_persona', type.name);
   }
 }
