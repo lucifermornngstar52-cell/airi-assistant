@@ -23,7 +23,7 @@ class NewsScreen extends StatefulWidget {
   @override State<NewsScreen> createState() => NewsScreenState();
 }
 
-class NewsScreenState extends State<_NewsScreen> {
+class NewsScreenState extends State<NewsScreen> {
   List<Map<String, dynamic>> _news = [];
   bool _loading = true;
   String? _error;
@@ -148,7 +148,7 @@ class RemindersScreen extends StatefulWidget {
   @override State<RemindersScreen> createState() => RemindersScreenState();
 }
 
-class RemindersScreenState extends State<_RemindersScreen> {
+class RemindersScreenState extends State<RemindersScreen> {
   List<String> _reminders = [];
   final _controller = TextEditingController();
 
@@ -236,7 +236,7 @@ class ShopListScreen extends StatefulWidget {
   @override State<ShopListScreen> createState() => ShopListScreenState();
 }
 
-class ShopListScreenState extends State<_ShopListScreen> {
+class ShopListScreenState extends State<ShopListScreen> {
   List<Map<String, dynamic>> _items = [];
   final _controller = TextEditingController();
   String _category = 'Продукты';
@@ -355,7 +355,7 @@ class ClipboardScreen extends StatefulWidget {
   @override State<ClipboardScreen> createState() => ClipboardScreenState();
 }
 
-class ClipboardScreenState extends State<_ClipboardScreen> {
+class ClipboardScreenState extends State<ClipboardScreen> {
   String _currentClip = '';
   List<String> _history = [];
   final _controller = TextEditingController();
@@ -472,7 +472,7 @@ class PersonalityScreen extends StatefulWidget {
   @override State<PersonalityScreen> createState() => PersonalityScreenState();
 }
 
-class PersonalityScreenState extends State<_PersonalityScreen> {
+class PersonalityScreenState extends State<PersonalityScreen> {
   String _personaName = 'JARVIS';
   int _interactions = 0;
   String _mood = 'Нейтральный';
@@ -550,7 +550,7 @@ class VoiceTestScreen extends StatefulWidget {
   @override State<VoiceTestScreen> createState() => VoiceTestScreenState();
 }
 
-class VoiceTestScreenState extends State<_VoiceTestScreen> {
+class VoiceTestScreenState extends State<VoiceTestScreen> {
   final _voice = VoiceService();
   String _text = '';
   bool _listening = false;
@@ -641,7 +641,7 @@ class TtsTestScreen extends StatefulWidget {
   @override State<TtsTestScreen> createState() => TtsTestScreenState();
 }
 
-class TtsTestScreenState extends State<_TtsTestScreen> {
+class TtsTestScreenState extends State<TtsTestScreen> {
   final _tts = TtsService();
   final _controller = TextEditingController(text: 'Сэр, все системы функционируют в штатном режиме.');
   bool _speaking = false;
@@ -767,7 +767,7 @@ class VisionTestScreen extends StatefulWidget {
   @override State<VisionTestScreen> createState() => VisionTestScreenState();
 }
 
-class VisionTestScreenState extends State<_VisionTestScreen> {
+class VisionTestScreenState extends State<VisionTestScreen> {
   final _vision = VisionService();
   String _result = '';
   bool _loading = false;
@@ -846,31 +846,31 @@ class EmotionTestScreen extends StatefulWidget {
   @override State<EmotionTestScreen> createState() => EmotionTestScreenState();
 }
 
-class EmotionTestScreenState extends State<_EmotionTestScreen> {
-  final _emotion = EmotionService();
-  String _emotion = '';
+class EmotionTestScreenState extends State<EmotionTestScreen> {
+  final emotionSvc = EmotionService();
+  String currentEmotion = '';
   bool _watching = false;
 
   @override
   void initState() {
     super.initState();
-    _emotionSvc.onEmotionDetected = (e) {
-      if (mounted) setState(() => _currentEmotion = e);
+    emotionSvc.onEmotionDetected = (e) {
+      if (mounted) setState(() => currentEmotion = e);
     };
   }
 
   @override
   void dispose() {
-    _emotionSvc.stop();
+    emotionSvc.stop();
     super.dispose();
   }
 
   void _toggle() {
     if (_watching) {
-      _emotionSvc.stop();
+      emotionSvc.stop();
       setState(() { _watching = false; });
     } else {
-      _emotionSvc.start();
+      emotionSvc.start();
       setState(() { _watching = true; });
     }
   }
@@ -891,12 +891,12 @@ class EmotionTestScreenState extends State<_EmotionTestScreen> {
           Icon(_watching ? Icons.face : Icons.face_retouching_off, size: 80,
             color: _watching ? AppTheme.accentBlue : AppTheme.textSecondary),
           const SizedBox(height: 20),
-          if (_currentEmotion.isNotEmpty)
+          if (currentEmotion.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(color: AppTheme.accentBlue.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20)),
-              child: Text(_currentEmotion, style: const TextStyle(color: AppTheme.accentBlue, fontSize: 20, fontWeight: FontWeight.w600)),
+              child: Text(currentEmotion, style: const TextStyle(color: AppTheme.accentBlue, fontSize: 20, fontWeight: FontWeight.w600)),
             ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
@@ -938,7 +938,7 @@ class MemoryViewScreen extends StatefulWidget {
   @override State<MemoryViewScreen> createState() => MemoryViewScreenState();
 }
 
-class MemoryViewScreenState extends State<_MemoryViewScreen> {
+class MemoryViewScreenState extends State<MemoryViewScreen> {
   List<Map<String, String>> _messages = [];
   List<Map<String, String>> _facts = [];
   bool _loading = true;
@@ -953,7 +953,8 @@ class MemoryViewScreenState extends State<_MemoryViewScreen> {
     final mem = MemoryService();
     await mem.init();
     final msgs = await mem.getRecentMessages(limit: 50);
-    final facts = await mem.getAllFacts();
+    final factsMap = await mem.getAllFacts();
+    final facts = factsMap.entries.map((e) => {'key': e.key, 'value': e.value}).toList();
     setState(() { _messages = msgs; _facts = facts; _loading = false; });
   }
 
