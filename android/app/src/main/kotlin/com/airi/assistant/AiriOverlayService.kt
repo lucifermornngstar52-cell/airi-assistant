@@ -143,9 +143,12 @@ class AiriOverlayService : Service() {
 
         val wv = WebView(applicationContext)
         webView = wv
-        wv.alpha = opacity
+        wv.alpha = 0f  // Скрыт до загрузки модели — фикс чёрного квадрата
         wv.setBackgroundColor(Color.TRANSPARENT)
         wv.background?.alpha = 0
+        wv.isVerticalScrollBarEnabled = false
+        wv.isHorizontalScrollBarEnabled = false
+        wv.scrollBarStyle = WebView.SCROLLBARS_OUTSIDE_OVERLAY
 
         wv.settings.apply {
             javaScriptEnabled = true
@@ -178,6 +181,7 @@ class AiriOverlayService : Service() {
             @JavascriptInterface
             fun onModelLoaded() {
                 handler.post {
+                    webView?.alpha = opacity  // Показываем оверлей после загрузки модели
                     webView?.evaluateJavascript("window.setAikaState('$currentState')", null)
                 }
             }
@@ -231,7 +235,13 @@ class AiriOverlayService : Service() {
         wv.loadUrl("${BASE_URL}live2d_viewer.html")
 
         // Fallback — показываем через 5 сек если JS не ответил
-        handler.postDelayed({ webView?.let { if (it.alpha < 0.5f) it.alpha = opacity } }, 5000)
+        handler.postDelayed({
+            webView?.let { if (it.alpha < 0.5f) it.alpha = opacity }
+        }, 5000)
+        // Дополнительный fallback через 8 сек (если модель тяжёлая)
+        handler.postDelayed({
+            webView?.let { if (it.alpha < 0.5f) it.alpha = opacity }
+        }, 8000)
 
         try {
             wm?.addView(wv, params)
@@ -287,7 +297,9 @@ class AiriOverlayService : Service() {
             ACTION_SWITCH_MODEL -> {
                 val path = intent.getStringExtra(EXTRA_MODEL_PATH) ?: return START_STICKY
                 handler.post {
+                    webView?.alpha = 0f  // Скрываем перед переключением
                     webView?.evaluateJavascript("window.switchModel('$path')", null)
+                    // onModelLoaded покажет оверлей снова
                 }
             }
             ACTION_SET_MODE -> {
