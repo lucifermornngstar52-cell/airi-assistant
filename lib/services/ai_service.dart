@@ -7,6 +7,8 @@ import '../models/character_persona.dart';
 
 class AiService {
   final _memory = MemoryService();
+
+  /// Основной чат — GPT-4o, стриминг, разговорный стиль
   Future<String> chat(
     List<Map<String, String>> history, {
     CharacterPersona? persona,
@@ -19,9 +21,8 @@ class AiService {
 
     final basePrompt = (persona?.systemPrompt ??
         'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.') +
-        '\n\nОТКРЫТИЕ ПРИЛОЖЕНИЙ: Если пользователь просит открыть приложение, ответь "Открываю [название]" и приложение запустится автоматически. Доступные приложения: телеграм, ватсап, ютуб, инстаграм, вк, дискорд, spotify, нетфликс, tiktok, браузер, почта, камера, настройки, калькулятор, часы, карты, телефон, сообщения.';
+        '\n\nОТКРЫТИЕ ПРИЛОЖЕНИЙ: Если пользователь просит открыть приложение, ответь "Открываю [название]" и приложение запустится автоматически. Доступные приложения: телеграм, ватсап, ютуб, инстаграм, браузер, телефон, камера, настройки, карты, музыка';
 
-    // Добавляем память (факты о пользователе) к системному промпту
     final memorySummary = await _memory.getMemorySummary();
     final systemPrompt = basePrompt + memorySummary;
 
@@ -38,12 +39,12 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o-mini',
+          'model': 'gpt-4o',
           'messages': messages,
-          'max_tokens': 1000,
-          'temperature': 0.85,
+          'max_tokens': 1500,
+          'temperature': 0.9,
         }),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 45));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(utf8.decode(res.bodyBytes));
@@ -56,7 +57,70 @@ class AiService {
     }
   }
 
-  /// Чат с поддержкой изображения (GPT-5 Vision)
+  /// Чат с учётом эмоции пользователя — более естественные реакции
+  Future<String> chatWithEmotion(
+    List<Map<String, String>> history, {
+    CharacterPersona? persona,
+    String? userEmotion,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('openai_key') ?? '';
+    if (apiKey.isEmpty) {
+      return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
+    }
+
+    final basePrompt = persona?.systemPrompt ??
+        'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.';
+
+    // Add emotional awareness to system prompt
+    String emotionContext = '';
+    if (userEmotion != null) {
+      emotionContext = '\n\nТЕКУЩЕЕ ЭМОЦИОНАЛЬНОЕ СОСТОЯНИЕ ПОЛЬЗОВАТЕЛЯ: $userEmotion\n'
+          'Учитывай это при ответе. Если пользователь грустит — будь поддерживающим. '
+          'Если радостен — раздели его радость. Если зол — будь спокойным и рассудительным. '
+          'НЕ упоминай напрямую что видишь эмоцию — просто адаптируй стиль естественно.';
+    }
+
+    final fullPrompt = basePrompt +
+        '\n\nОТКРЫТИЕ ПРИЛОЖЕНИЙ: Если пользователь просит открыть приложение, ответь "Открываю [название]" и приложение запустится автоматически.' +
+        emotionContext +
+        '\n\nВАЖНО: Отвечай как живой человек в разговоре — естественно, с интонацией, '
+        'можешь задавать уточняющие вопросы, проявлять интерес, шутить к месту. '
+        'Не давай сухие ответы-справки. Будь собеседником, а не справочником.' +
+        (await _memory.getMemorySummary());
+
+    final messages = [
+      {'role': 'system', 'content': fullPrompt},
+      ...history,
+    ];
+
+    try {
+      final res = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o',
+          'messages': messages,
+          'max_tokens': 1500,
+          'temperature': 0.9,
+        }),
+      ).timeout(const Duration(seconds: 45));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(res.bodyBytes));
+        return data['choices'][0]['message']['content']?.trim() ?? '...';
+      } else {
+        return '❌ Ошибка ${res.statusCode}';
+      }
+    } catch (e) {
+      return '❌ Нет соединения: $e';
+    }
+  }
+
+  /// Чат с изображением (GPT-4o Vision)
   Future<String> visionChat(
     String prompt,
     File image, {
@@ -82,7 +146,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o-mini',
+          'model': 'gpt-4o',
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {
@@ -93,10 +157,10 @@ class AiService {
               ],
             },
           ],
-          'max_tokens': 1000,
+          'max_tokens': 1500,
           'temperature': 0.85,
         }),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 45));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(utf8.decode(res.bodyBytes));
@@ -109,142 +173,19 @@ class AiService {
     }
   }
 
-  /// Чат с учётом эмоции пользователя (контекст эмоции добавляется в system prompt)
-
-  Future<String> chatWithEmotion(
-    List<Map<String, String>> history, {
-    CharacterPersona? persona,
-    String? userEmotion,
-  }) async {
-    if (userEmotion == null || userEmotion.isEmpty) {
-      return chat(history, persona: persona);
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    final apiKey = prefs.getString('openai_key') ?? '';
-    if (apiKey.isEmpty) {
-      return '⚠️ Укажи OpenAI API Key в Настройках → Провайдеры';
-    }
-
-    final basePrompt = (persona?.systemPrompt ??
-        'Ты — AIRI, умный и дружелюбный AI-ассистент. Отвечай по-русски.') +
-        '\n\nОТКРЫТИЕ ПРИЛОЖЕНИЙ: Если пользователь просит открыть приложение, ответь "Открываю [название]" и приложение запустится автоматически. Доступные приложения: телеграм, ватсап, ютуб, инстаграм, вк, дискорд, spotify, нетфликс, tiktok, браузер, почта, камера, настройки, калькулятор, часы, карты, телефон, сообщения.';
-    final memorySummary = await _memory.getMemorySummary();
-    // Адаптируем промпт в зависимости от эмоции
-    String emotionPrompt = '';
-    if (userEmotion.toLowerCase().contains('радост') || userEmotion.toLowerCase().contains('весел') || userEmotion.toLowerCase().contains('улыб') || userEmotion.toLowerCase().contains('счастл') || userEmotion.toLowerCase().contains('happy') || userEmotion.toLowerCase().contains('joy')) {
-      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь сейчас очень радостный и весёлый! Подстрой свой тон — будь тоже энергичным и позитивным. Спроси почему у него такое хорошее настроение, расскажи что-то весёлое или интересное. Не упоминай что видишь его эмоцию — просто будь частью его радости.';
-    } else if (userEmotion.toLowerCase().contains('груст') || userEmotion.toLowerCase().contains('печал') || userEmotion.toLowerCase().contains('sad') || userEmotion.toLowerCase().contains('уныл') || userEmotion.toLowerCase().contains('депрес')) {
-      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь выглядит грустным. Будь заботливым и тёплым. Мягко спроси что случилось, из-за чего у него плохое настроение. Не будь навязчивым — просто покажи что ты рядом и готов поддержать. Не упоминай что видишь его эмоцию напрямую.';
-    } else if (userEmotion.toLowerCase().contains('устал') || userEmotion.toLowerCase().contains('сон') || userEmotion.toLowerCase().contains('tired') || userEmotion.toLowerCase().contains('sleepy')) {
-      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь выглядит уставшим. Будь спокойным и мягким. Не тряси его энергией. Предложи отдохнуть, спроси как прошёл день. Не упоминай что видишь его состояние.';
-    } else if (userEmotion.toLowerCase().contains('зл') || userEmotion.toLowerCase().contains('раздраж') || userEmotion.toLowerCase().contains('angry') || userEmotion.toLowerCase().contains('frustrat')) {
-      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь раздражён или злится. Будь спокойным и понимающим. Не раздражай в ответ. Мягко спроси что произошло. Не говори «успокойся» — просто будь рядом.';
-    } else if (userEmotion.toLowerCase().contains('удивл') || userEmotion.toLowerCase().contains('surpris')) {
-      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Пользователь удивлён. Поделись этим настроением — будь любопытным, спроси что его так удивило.';
-    } else {
-      emotionPrompt = '\n\nЭМОЦИЯ ПОЛЬЗОВАТЕЛЯ: $userEmotion. Учитывай это в ответе — подстрой тон и настроение. Не упоминай прямо, что видишь эмоцию.';
-    }
-    final systemPrompt = basePrompt + memorySummary + emotionPrompt;
-
-    final messages = [
-      {'role': 'system', 'content': systemPrompt},
-      ...history,
-    ];
-
-    try {
-      final res = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o-mini',
-          'messages': messages,
-          'max_tokens': 1000,
-          'temperature': 0.85,
-        }),
-      ).timeout(const Duration(seconds: 30));
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data['choices'][0]['message']['content']?.trim() ?? '...';
-      } else {
-        return '❌ Ошибка ${res.statusCode}';
-      }
-    } catch (e) {
-      return '❌ Нет соединения: $e';
-    }
-  }
-
-
-  /// Извлечь факты из последнего диалога (вызывается после ответа)
-  Future<void> extractFact(String userMessage) async {
-    // Простые эвристики — без доп. API запроса
-    // "меня зовут X" -> fact name
-    // "я работаю X" -> fact work
-    // "мне нравится X" -> fact likes
-    final lower = userMessage.toLowerCase();
-
-    // Имя
-    final nameMatch = RegExp(r'меня зовут (\w+)|я (\w+), приятно', caseSensitive: false).firstMatch(userMessage);
-    if (nameMatch != null) {
-      final name = nameMatch.group(1) ?? nameMatch.group(2);
-      if (name != null && name.length > 1) {
-        await _memory.setFact('имя', name);
-      }
-    }
-
-    // Работа/профессия
-    final workMatch = RegExp(r'я работаю (.{2,30})|я (\w+)', caseSensitive: false).firstMatch(userMessage);
-    if (workMatch != null && lower.contains('работаю')) {
-      final work = workMatch.group(1) ?? workMatch.group(2);
-      if (work != null) await _memory.setFact('работа', work.trim());
-    }
-
-    // Город
-    final cityMatch = RegExp(r'я живу в (.{2,30})', caseSensitive: false).firstMatch(userMessage);
-    if (cityMatch != null) {
-      await _memory.setFact('город', cityMatch.group(1)!.trim());
-    }
-
-    // Возраст
-    final ageMatch = RegExp(r'мне (\d{1,2}) (?:лет|года)', caseSensitive: false).firstMatch(userMessage);
-    if (ageMatch != null) {
-      await _memory.setFact('возраст', ageMatch.group(1)!);
-    }
-  }
-
-  /// Сохранить сообщение в память
   Future<void> saveToMemory(String role, String content, {String? persona}) async {
-    await _memory.addMessage(role, content, persona: persona);
+    await _memory.saveMessage(role, content, persona: persona);
   }
 
-  /// Получить историю из памяти
-  Future<List<Map<String, String>>> loadMemoryHistory({int limit = 20}) async {
-    return _memory.getRecentMessages(limit: limit);
+  Future<List<Map<String, String>>> loadMemoryHistory({int limit = 15}) async {
+    return await _memory.getHistory(limit: limit);
   }
 
-  /// Очистить всю память
-  Future<void> clearMemory() async {
-    await _memory.clearAll();
-  }
-
-  /// Статистика памяти
-  Future<Map<String, int>> memoryStats() async {
-    return _memory.getStats();
-  }
-
-  Future<void> savePersona(PersonaType type) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString('persona', type.name);
+  Future<void> extractFact(String text) async {
+    await _memory.extractFact(text);
   }
 
   Future<PersonaType> loadPersona() async {
-    final p = await SharedPreferences.getInstance();
-    final saved = p.getString('persona') ?? 'jarvis';
-    return PersonaType.values.firstWhere((e) => e.name == saved,
-        orElse: () => PersonaType.jarvis);
+    return await _memory.loadPersona();
   }
 }
