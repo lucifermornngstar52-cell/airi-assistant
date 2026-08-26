@@ -51,6 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
   File? _pendingImage;
   final _overlay = OverlayService();
   bool _overlayActive = false;
+  bool _wakeStatus = false;
 
   @override
   void initState() {
