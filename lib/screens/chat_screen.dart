@@ -12,6 +12,7 @@ import '../services/emotion_service.dart';
 import '../services/memory_service.dart';
 import '../services/overlay_service.dart';
 import '../services/app_launcher_service.dart';
+import '../services/phone_control_service.dart';
 import '../services/web_search_service.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -224,6 +225,22 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollDown();
         OverlayService.hudStatus('J.A.R.V.I.S. RESPONDING');
         await _tts.speak(launchResult, _persona.type);
+        return;
+      }
+    }
+
+    // ── Проверяем команду управления телефоном ПЕРЕД AI ──
+    if (!hasImage && text.isNotEmpty) {
+      final phoneResult = await PhoneControlService.tryPhoneCommand(text);
+      if (phoneResult != null) {
+        setState(() {
+          _messages.add(ChatMessage(text: text, isUser: true));
+          _messages.add(ChatMessage(text: phoneResult, isUser: false));
+          _loading = false;
+        });
+        _scrollDown();
+        OverlayService.hudStatus('ACTION COMPLETE');
+        await _tts.speak(phoneResult, _persona.type);
         return;
       }
     }
