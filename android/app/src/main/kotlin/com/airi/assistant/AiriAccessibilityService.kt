@@ -73,13 +73,6 @@ class AiriAccessibilityService : AccessibilityService() {
                         Log.d(TAG, "Tap at ($cx, $cy)")
                         JarvisHudService.showTarget(cx, cy)
                         source.recycle()
-                    } else {
-                        // Fallback: use event coordinates if available
-                        val cx = event.x
-                        val cy = event.y
-                        if (cx > 0 && cy > 0) {
-                            JarvisHudService.showTarget(cx, cy)
-                        }
                     }
                 } catch (_: Throwable) {}
             }
