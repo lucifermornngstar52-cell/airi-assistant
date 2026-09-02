@@ -202,6 +202,12 @@ class OverlayService {
     }
   }
 
+  /// Public deactivate — for use from settings screens
+  Future<void> deactivate() async {
+    await hide();
+    _active = false;
+  }
+
 
   // JARVIS HUD methods
   static const _hudChannel = MethodChannel("com.airi.assistant/hud");

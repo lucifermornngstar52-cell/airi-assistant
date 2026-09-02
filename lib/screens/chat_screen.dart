@@ -354,11 +354,12 @@ _voice.stopWakeWordMode();
   // ── Live2D Overlay ────────────────────────────────────────────
 
   void _toggleOverlay() async {
+    final wasActive = _overlay.isActive;
     final result = await _overlay.toggle();
     if (!mounted) return;
     setState(() => _overlayActive = result);
-    if (!result && _overlay.isActive == false) {
-      // Показываем подсказку если разрешение не дано
+    // Показываем подсказку только если пытались ВКЛЮЧИТЬ оверлей, но не получилось
+    if (!result && !wasActive) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Разрешите отображение поверх других приложений'),

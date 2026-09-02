@@ -8,6 +8,7 @@ import 'persona_screen.dart';
 import 'providers_screen.dart';
 import 'model_selection_screen.dart';
 import '../services/live2d_service.dart';
+import '../services/overlay_service.dart';
 import 'currency_screen.dart';
 import 'weather_screen.dart';
 import 'schedule_screen.dart';
@@ -383,23 +384,63 @@ class _Live2DSettingsScreenState extends State<Live2DSettingsScreen> {
                   SizedBox(height: 4),
                   Text('Модель плавает поверх всех приложений',
                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-        const SizedBox(height: 4),
                 ],
               )),
-        // ─── Выбор модели ─────────────────────────────────────
-        ListTile(
-          leading: const Icon(Icons.face_retouching_natural, color: Colors.blueAccent),
-          title: const Text('Выбор модели'),
-          subtitle: const Text('Встроенные + свои модели'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(
-              builder: (_) => const ModelSelectionScreen(),
-            ));
-          },
-        ),
+              const SizedBox(height: 4),
             ]),
           ),
+          const SizedBox(height: 20),
+
+          // ─── Выбор модели ─────────────────────────────────────
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.cardBorder, width: 0.5),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.face_retouching_natural, color: Colors.blueAccent),
+              title: const Text('Выбор модели'),
+              subtitle: const Text('Встроенные + свои модели'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const ModelSelectionScreen(),
+                ));
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ─── Кнопка отключения оверлея ───────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent.withOpacity(0.15),
+                foregroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(color: Colors.redAccent.withOpacity(0.3), width: 1),
+              ),
+              icon: const Icon(Icons.visibility_off_outlined, size: 20),
+              label: const Text('Отключить оверлей', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              onPressed: () async {
+                await OverlayService().deactivate();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Оверлей отключён'),
+                    backgroundColor: AppTheme.cardColor,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
           const SizedBox(height: 20),
 
           // URL модели
