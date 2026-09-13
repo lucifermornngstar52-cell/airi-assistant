@@ -8,7 +8,7 @@ import '../models/character_persona.dart';
 class AiService {
   final _memory = MemoryService();
 
-  /// Основной чат — GPT-4o, стриминг, разговорный стиль
+  /// Основной чат — GPT-4o, разговорный стиль
   Future<String> chat(
     List<Map<String, String>> history, {
     CharacterPersona? persona,
@@ -47,8 +47,9 @@ class AiService {
       ).timeout(const Duration(seconds: 45));
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data['choices'][0]['message']['content']?.trim() ?? '...';
+        return _extractContent(res);
+      } else if (res.statusCode == 401) {
+        return '❌ Неверный API-ключ OpenAI';
       } else {
         return '❌ Ошибка ${res.statusCode}';
       }
@@ -110,8 +111,9 @@ class AiService {
       ).timeout(const Duration(seconds: 45));
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data['choices'][0]['message']['content']?.trim() ?? '...';
+        return _extractContent(res);
+      } else if (res.statusCode == 401) {
+        return '❌ Неверный API-ключ OpenAI';
       } else {
         return '❌ Ошибка ${res.statusCode}';
       }
@@ -163,8 +165,9 @@ class AiService {
       ).timeout(const Duration(seconds: 45));
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data['choices'][0]['message']['content']?.trim() ?? '...';
+        return _extractContent(res);
+      } else if (res.statusCode == 401) {
+        return '❌ Неверный API-ключ OpenAI';
       } else {
         return '❌ Ошибка ${res.statusCode}';
       }
@@ -199,5 +202,16 @@ class AiService {
   Future<void> savePersona(PersonaType type) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('aika_persona', type.name);
+  }
+
+  /// Безопасное извлечение текста ответа OpenAI
+  String _extractContent(http.Response res) {
+    final data = jsonDecode(utf8.decode(res.bodyBytes));
+    final choices = data['choices'] as List?;
+    if (choices == null || choices.isEmpty) {
+      return '⚠️ API вернул пустой ответ';
+    }
+    final msg = (choices[0] as Map)['message'] as Map?;
+    return (msg?['content'] as String?)?.trim() ?? '...';
   }
 }

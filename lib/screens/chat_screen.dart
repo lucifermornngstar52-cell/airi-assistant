@@ -14,6 +14,7 @@ import '../services/overlay_service.dart';
 import '../services/app_launcher_service.dart';
 import '../services/phone_control_service.dart';
 import '../services/web_search_service.dart';
+import '../services/reminder_service.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -50,6 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _emotionError;
   File? _pendingImage;
   final _overlay = OverlayService();
+  final _reminder = ReminderService();
   bool _overlayActive = false;
   bool _wakeStatus = false;
 
@@ -60,6 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _initEmotionWatcher();
     _initMemory();
     _initWakeWord();
+    _reminder.initialize();
   }
 
   Future<void> _initMemory() async {
@@ -164,6 +167,22 @@ _voice.stopWakeWordMode();
         _scrollDown();
         OverlayService.hudStatus('ACTION COMPLETE');
         await _tts.speak(phoneResult, _persona.type);
+        OverlayService.hudHide();
+        return;
+      }
+    }
+
+    // ── Голосовые напоминания/таймеры/будильник ПЕРЕД AI ──
+    if (!hasImage && text.isNotEmpty) {
+      final reminderReply = await _reminder.tryParseReminder(text);
+      if (reminderReply != null) {
+        setState(() {
+          _messages.add(ChatMessage(text: text, isUser: true));
+          _messages.add(ChatMessage(text: reminderReply, isUser: false));
+          _loading = false;
+        });
+        _scrollDown();
+        await _tts.speak(reminderReply, _persona.type);
         OverlayService.hudHide();
         return;
       }

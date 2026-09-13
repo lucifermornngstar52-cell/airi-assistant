@@ -39,7 +39,7 @@ class AppTheme {
     fontFamily: 'sans-serif',
   );
 
-  // ── AikaTheme-совместимые алиасы ──────────────────────────────
+  // ── Алиасы цветов (раньше AikaTheme) ──────────────────────────────
   static const Color neonBlue = Color(0xFF00D4FF);
   static const Color neonPurple = Color(0xFF9D4EDD);
   static const Color neonPink = Color(0xFFFF006E);

@@ -10,6 +10,7 @@ import '../services/ai_service.dart';
 import '../services/voice_service.dart';
 import '../services/tts_service.dart';
 import '../services/memory_service.dart';
+import '../services/reminder_service.dart';
 import '../services/vision_service.dart';
 import '../services/emotion_service.dart';
 import 'persona_screen.dart';
@@ -46,9 +47,7 @@ class NewsScreenState extends State<NewsScreen> {
   Future<void> _fetchNews() async {
     setState(() { _loading = true; _error = null; });
     try {
-      // Use Google News RSS → parse via free API
-      final url = 'https://newsdata.io/api/1/news?category=$_category&language=ru&apikey=pub_0dummy';
-      // Fallback: use a simple RSS feed
+      // Google News RSS
       final rssUrl = 'https://news.google.com/rss/search?q=$_category+when:1d&hl=ru&gl=KZ&ceid=KZ:ru';
       final response = await http.get(Uri.parse(rssUrl)).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
@@ -151,11 +150,19 @@ class RemindersScreen extends StatefulWidget {
 class RemindersScreenState extends State<RemindersScreen> {
   List<String> _reminders = [];
   final _controller = TextEditingController();
+  final _reminderSvc = ReminderService();
 
   @override
   void initState() {
     super.initState();
+    _reminderSvc.initialize();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -168,16 +175,31 @@ class RemindersScreenState extends State<RemindersScreen> {
     await prefs.setStringList('reminders', _reminders);
   }
 
-  void _add() {
+  Future<void> _add() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    setState(() { _reminders.insert(0, text); _controller.clear(); });
+    // Если в тексте есть время («через 10 минут», «в 14:30») — планируем настоящее уведомление
+    String display = text;
+    if (text.contains('через') ||
+        text.contains(RegExp(r'\bв\s*\d{1,2}[:.]')) ||
+        text.contains('таймер') ||
+        text.contains('будильник')) {
+      final reply = await _reminderSvc.tryParseReminder(text);
+      if (reply != null) display = '⏰ $text';
+    }
+    setState(() {
+      _reminders.insert(0, display);
+      _controller.clear();
+    });
     _save();
   }
 
   void _remove(int i) {
+    final removed = _reminders[i];
     setState(() { _reminders.removeAt(i); });
     _save();
+    final label = removed.startsWith('⏰ ') ? removed.substring(2) : removed;
+    if (removed.startsWith('⏰ ')) _reminderSvc.cancelByLabel(label);
   }
 
   @override

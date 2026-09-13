@@ -140,11 +140,6 @@ class ReminderService {
     return null;
   }
 
-  // ──────────────────────── INTERNAL ────────────────────────
-
-  Future<String> _schedule({required String text, required DateTime fireAt}) async {
-    final id = fireAt.millisecondsSinceEpoch ~/ 1000 % 2000000000;
-
   List<Map<String, dynamic>> _readRemindersSync(SharedPreferences prefs) {
     final raw = prefs.getString(_keyReminders) ?? '[]';
     try {
@@ -154,6 +149,28 @@ class ReminderService {
       return [];
     }
   }
+
+  // ──────────────────────── INTERNAL ────────────────────────
+
+  /// Отменить напоминание по тексту (для экрана «Напоминания»).
+  /// Сервис хранит очищенную формулировку («Позвонить маме»),
+  /// поэтому ищем вхождение в обе стороны.
+  Future<bool> cancelByLabel(String label) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = _readRemindersSync(prefs);
+    final l = label.toLowerCase().trim();
+    for (final r in list) {
+      final t = ((r['text'] as String?) ?? '').toLowerCase().trim();
+      if (t.isNotEmpty && (t == l || t.contains(l) || l.contains(t))) {
+        await _removeReminder((r['id'] as int?) ?? -1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<String> _schedule({required String text, required DateTime fireAt}) async {
+    final id = fireAt.millisecondsSinceEpoch ~/ 1000 % 2000000000;
 
     // Сохраняем в SharedPreferences (переживает перезапуск)
     final prefs = await SharedPreferences.getInstance();
@@ -182,8 +199,6 @@ class ReminderService {
         ),
         payload: text,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
       debugPrint('[Reminder] запланировано (persistent): "$text" в $fireAt');
     } catch (e) {
