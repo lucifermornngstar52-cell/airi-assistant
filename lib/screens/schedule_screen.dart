@@ -22,6 +22,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> with SingleTickerProvid
     _load();
   }
 
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final now = DateTime.now();
     final todayStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';

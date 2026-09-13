@@ -13,7 +13,6 @@ import 'package:timezone/data/latest.dart' as tz_data;
 /// (через flutter_local_notifications zoned scheduling).
 class ReminderService {
   static const _keyReminders = 'aika_reminders_v2';
-  static const _alarmChannel = MethodChannel('com.aika.assistant/alarm');
 
   final FlutterLocalNotificationsPlugin _notif =
       FlutterLocalNotificationsPlugin();
@@ -146,11 +145,19 @@ class ReminderService {
   Future<String> _schedule({required String text, required DateTime fireAt}) async {
     final id = fireAt.millisecondsSinceEpoch ~/ 1000 % 2000000000;
 
+  List<Map<String, dynamic>> _readRemindersSync(SharedPreferences prefs) {
+    final raw = prefs.getString(_keyReminders) ?? '[]';
+    try {
+      return List<Map<String, dynamic>>.from(
+          (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e)));
+    } catch (_) {
+      return [];
+    }
+  }
+
     // Сохраняем в SharedPreferences (переживает перезапуск)
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyReminders) ?? '[]';
-    final list = List<Map<String, dynamic>>.from(
-        (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e)));
+    final list = _readRemindersSync(prefs);
     list.add({'id': id, 'text': text, 'fireAt': fireAt.toIso8601String()});
     await prefs.setString(_keyReminders, jsonEncode(list));
 
@@ -210,9 +217,7 @@ class ReminderService {
 
   Future<void> _removeReminder(int id) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyReminders) ?? '[]';
-    final list = List<Map<String, dynamic>>.from(
-        (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e)));
+    final list = _readRemindersSync(prefs);
     list.removeWhere((r) => r['id'] == id);
     await prefs.setString(_keyReminders, jsonEncode(list));
     await _notif.cancel(id);
@@ -220,9 +225,7 @@ class ReminderService {
 
   Future<void> _restoreActiveReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyReminders) ?? '[]';
-    final list = List<Map<String, dynamic>>.from(
-        (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e)));
+    final list = _readRemindersSync(prefs);
     final now = DateTime.now();
     final toRemove = <int>[];
 

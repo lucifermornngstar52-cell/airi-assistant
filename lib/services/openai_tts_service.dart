@@ -94,7 +94,7 @@ class OpenAiTtsService {
           'response_format': 'mp3',
           'speed': _speed,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
       if (resp.statusCode == 200) {
         final dir = await getTemporaryDirectory();
         final file = File('${dir.path}/jarvis_tts_${DateTime.now().millisecondsSinceEpoch}.mp3');

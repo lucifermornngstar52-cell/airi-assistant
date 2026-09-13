@@ -51,7 +51,12 @@ class PeopleMemoryService {
   Future<void> saveFact(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyFacts) ?? '{}';
-    final facts = Map<String, String>.from(jsonDecode(raw));
+    Map<String, String> facts;
+    try {
+      facts = Map<String, String>.from(jsonDecode(raw));
+    } catch (_) {
+      facts = {};
+    }
     facts[key.toLowerCase().trim()] = value.trim();
     await prefs.setString(_keyFacts, jsonEncode(facts));
   }
@@ -59,14 +64,23 @@ class PeopleMemoryService {
   Future<String?> getFact(String key) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyFacts) ?? '{}';
-    final facts = Map<String, String>.from(jsonDecode(raw));
+    Map<String, String> facts;
+    try {
+      facts = Map<String, String>.from(jsonDecode(raw));
+    } catch (_) {
+      facts = {};
+    }
     return facts[key.toLowerCase().trim()];
   }
 
   Future<Map<String, String>> getAllFacts() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyFacts) ?? '{}';
-    return Map<String, String>.from(jsonDecode(raw));
+    try {
+      return Map<String, String>.from(jsonDecode(raw));
+    } catch (_) {
+      return {};
+    }
   }
 
   // ──────────────── КОНТЕКСТ ДЛЯ GPT ────────────────

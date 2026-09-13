@@ -147,7 +147,7 @@ class SuggestionChipsWidget extends StatelessWidget {
                 color: Colors.white.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AikaTheme.neonBlue.withOpacity(0.4),
+                  color: AppTheme.neonBlue.withOpacity(0.4),
                   width: 1,
                 ),
               ),

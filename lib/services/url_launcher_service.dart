@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 /// Открытие веб-сайтов через Intent
 class UrlLauncherService {
-  static const _channel = MethodChannel('com.aika.assistant/launcher');
+  static const _channel = MethodChannel('com.airi.assistant/launcher');
 
   /// Открыть URL в браузере
   static Future<bool> openUrl(String url) async {

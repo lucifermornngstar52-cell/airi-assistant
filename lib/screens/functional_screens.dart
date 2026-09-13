@@ -251,7 +251,12 @@ class ShopListScreenState extends State<ShopListScreen> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('shoplist') ?? '[]';
-    setState(() { _items = List<Map<String, dynamic>>.from(jsonDecode(raw)); });
+    List<Map<String, dynamic>> items = [];
+    try {
+      items = List<Map<String, dynamic>>.from(jsonDecode(raw));
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() { _items = items; });
   }
 
   Future<void> _save() async {
