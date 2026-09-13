@@ -199,6 +199,8 @@ class ReminderService {
         ),
         payload: text,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
       debugPrint('[Reminder] запланировано (persistent): "$text" в $fireAt');
     } catch (e) {
